@@ -41,8 +41,8 @@ import numpy as np
 from PIL import Image
 import easyocr
 
-# 版本号（语义化版本：主版本.次版本.修订号）
-__version__ = "1.0.4"
+# 从 version.py 导入版本号（专门文件，避免每次发版修改主脚本）
+from version import __version__
 
 # ============================================================
 #  配置区（根据需要修改）
