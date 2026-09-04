@@ -58,7 +58,10 @@ DEVICE = ""
 # 技能选择策略: "middle" | "left" | "right" | "random"
 SKILL_STRATEGY = "middle"
 
-# 每次循环检测间隔（秒）
+# 游戏循环中每次检测间隔（秒）- 战力高词条弹出快可调小，战力低可调大减轻OCR压力
+BATTLE_LOOP_INTERVAL = 3.0
+
+# 非游戏循环中每次检测间隔（秒）
 CHECK_INTERVAL = 0.8
 
 # 每关通关后清理截图（模拟器内 + 本地临时文件）
@@ -1343,9 +1346,9 @@ def main():
                 pass  # 上面已经打印过了
             last_status = status
 
-            # 根据当前状态决定截图间隔：游戏循环中3秒一次（减轻OCR压力），非游戏循环0.8秒一次
+            # 根据当前状态决定截图间隔：游戏循环中用BATTLE_LOOP_INTERVAL，非游戏循环用CHECK_INTERVAL
             if in_battle_loop:
-                time.sleep(3.0)
+                time.sleep(BATTLE_LOOP_INTERVAL)
             else:
                 time.sleep(CHECK_INTERVAL)
 

@@ -139,17 +139,20 @@ python launcher.py
 # 模拟器类型: "mumu"=MuMu | "ldplayer"=雷电 | "auto"=自动检测
 EMULATOR_TYPE = "mumu"
 
-# 技能选择策略: "left"=左 | "middle"=中 | "right"=右
+# 技能选择策略: "left"=左 | "middle"=中 | "right"=右 | "random"=随机
 SKILL_STRATEGY = "middle"
 
-# 非游戏循环中每次检测间隔（秒），游戏循环中固定为3秒
+# 游戏循环中每次检测间隔（秒）
+# 战力高、词条弹出快 → 调小（如1.5~2.0），响应更快
+# 战力低、词条弹出慢 → 调大（如3.0~5.0），减轻OCR压力
+BATTLE_LOOP_INTERVAL = 3.0
+
+# 非游戏循环中每次检测间隔（秒）
 CHECK_INTERVAL = 0.8
 
 # 每关通关后是否自动清理截图（模拟器内 + 本地临时文件）
 CLEAN_SCREENSHOT_PER_LEVEL = True
 ```
-
-> 💡 游戏循环中的3秒间隔是硬编码的（减轻OCR识别压力），如果需要修改，请搜索代码中的 `time.sleep(3.0)` 进行调整。
 
 ## 📋 操作位置说明（基准 1080×1920）
 
