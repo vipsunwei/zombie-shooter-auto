@@ -231,12 +231,12 @@ A: 双倍奖励需要同时满足三个条件：
 - 「使计算机进入睡眠状态」**设为「从不」**
 
 **方法二：命令行（一键设置）**
-`powershell
+```powershell
 # 接通电源时永不睡眠
 powercfg /change standby-timeout-ac 0
 # 接通电源时永不休眠
 powercfg /change hibernate-timeout-ac 0
-`
+```
 
 #### 2. 模拟器设置
 
