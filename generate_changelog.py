@@ -24,13 +24,18 @@ CATEGORY_RULES = [
         "emoji": "✨"
     },
     {
+        "name": "重构",
+        "keywords": ["重构", "refactor", "重写", "拆分", "提取"],
+        "emoji": "🔧"
+    },
+    {
         "name": "修复",
-        "keywords": ["修复", "修", "bug", "解决", "fix", "bugfix", "hotfix", "修正"],
+        "keywords": ["修复", "bug", "解决", "fix", "bugfix", "hotfix", "修正", "修补"],
         "emoji": "🐛"
     },
     {
         "name": "优化",
-        "keywords": ["优化", "改进", "提升", "重构", "refactor", "perf", "performance", "调整"],
+        "keywords": ["优化", "改进", "提升", "perf", "performance", "调整"],
         "emoji": "⚡"
     },
     {
@@ -51,7 +56,7 @@ CATEGORY_RULES = [
     {
         "name": "构建",
         "keywords": ["构建", "build", "ci", "cd", "部署", "release", "发布", "chore", "依赖"],
-        "emoji": "🔧"
+        "emoji": "🔨"
     },
 ]
 
@@ -135,7 +140,7 @@ def generate_changelog_content(commits, version=None, date=None):
     lines = []
 
     # 按固定顺序输出分类
-    category_order = ["新增", "修复", "优化", "文档", "格式", "测试", "构建", "其他"]
+    category_order = ["新增", "重构", "修复", "优化", "文档", "格式", "测试", "构建", "其他"]
     for cat_name in category_order:
         if cat_name in categorized:
             cat = categorized[cat_name]
