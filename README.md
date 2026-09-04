@@ -284,17 +284,17 @@ MIT License
 
 ### 发布新版本（推荐：一键发布脚本）
 
-使用 `release.ps1` 一键完成：升级版本号 → 更新CHANGELOG → 提交 → 打tag → 推送。
+使用 `release.py` 一键完成：升级版本号 → 更新CHANGELOG → 提交 → 打tag → 推送。
 
-```powershell
+```bash
 # 升级修订号：1.0.0 → 1.0.1（修bug）
-.\release.ps1 patch
+python release.py patch
 
 # 升级次版本号：1.0.0 → 1.1.0（加功能）
-.\release.ps1 minor
+python release.py minor
 
 # 升级主版本号：1.0.0 → 2.0.0（大改不兼容）
-.\release.ps1 major
+python release.py major
 ```
 
 脚本会自动完成：
