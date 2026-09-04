@@ -69,7 +69,7 @@ python --version
 ### 4. 下载脚本
 
 ```bash
-git clone https://github.com/你的用户名/zombie-shooter-auto.git
+git clone https://github.com/vipsunwei/zombie-shooter-auto.git
 cd zombie-shooter-auto
 ```
 
@@ -142,12 +142,14 @@ EMULATOR_TYPE = "mumu"
 # 技能选择策略: "left"=左 | "middle"=中 | "right"=右
 SKILL_STRATEGY = "middle"
 
-# 游戏循环中截图间隔（秒）
-BATTLE_LOOP_INTERVAL = 3.0
+# 非游戏循环中每次检测间隔（秒），游戏循环中固定为3秒
+CHECK_INTERVAL = 0.8
 
-# 非游戏循环截图间隔（秒）
-NORMAL_LOOP_INTERVAL = 0.8
+# 每关通关后是否自动清理截图（模拟器内 + 本地临时文件）
+CLEAN_SCREENSHOT_PER_LEVEL = True
 ```
+
+> 💡 游戏循环中的3秒间隔是硬编码的（减轻OCR识别压力），如果需要修改，请搜索代码中的 `time.sleep(3.0)` 进行调整。
 
 ## 📋 操作位置说明（基准 1080×1920）
 
@@ -157,8 +159,8 @@ NORMAL_LOOP_INTERVAL = 0.8
 | 技能卡片-中 | (540, 989) | 默认选择 |
 | 技能卡片-右 | (907, 989) | 选择技能时 |
 | 开始游戏 | (540, 1594) | 关卡选择界面 |
-| 双倍奖励 | (348, 1692) | 通关结算界面 |
-| 返回按钮 | OCR动态识别 | 通关结算界面 |
+| 双倍奖励 | OCR动态识别 | 通关结算界面（约在左侧） |
+| 返回按钮 | OCR动态识别 | 通关结算界面（约在右侧） |
 | 底部导航-战斗 | (540, 1871) | 主界面切换 |
 | 精英掉落关闭 | (100, 1750) | 左下角 |
 | 付费弹窗× | (990, 240) | 右上角 |
