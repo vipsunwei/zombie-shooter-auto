@@ -120,18 +120,17 @@ def check_bump2version():
     print()
     print_color("[2/4] 检查 bump2version...", Color.YELLOW)
 
-    # 检查 bump2version 或 bumpversion
-    result = subprocess.run("bump2version --version", shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-        result = subprocess.run("bumpversion --version", shell=True, capture_output=True, text=True)
-        if result.returncode != 0:
-            print_color("⚠️  bump2version 未安装，正在安装...", Color.YELLOW)
-            run_cmd("pip install bump2version")
-            print_color("✅ bump2version 安装完成", Color.GREEN)
-        else:
-            print_color("✅ bumpversion 已就绪（旧版本名）", Color.GREEN)
-    else:
+    # 用模块导入方式检查（最可靠，bump2version 不支持 --version 参数）
+    result = subprocess.run(
+        [sys.executable, "-c", "import bumpversion; print('installed')"],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
         print_color("✅ bump2version 已就绪", Color.GREEN)
+    else:
+        print_color("⚠️  bump2version 未安装，正在安装...", Color.YELLOW)
+        run_cmd(f'"{sys.executable}" -m pip install bump2version')
+        print_color("✅ bump2version 安装完成", Color.GREEN)
 
 def generate_changelog():
     """自动生成 changelog"""
