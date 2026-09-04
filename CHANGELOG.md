@@ -1,18 +1,3 @@
-
-
-### ✨ 新增
-
-- feat: 增加changelog自动生成脚本，发版时自动生成changelog (5da54da)
-
-### 🐛 修复
-
-- fix: 修复release.py自动生成changelog后工作区不干净导致bump2version失败的问题 (fb95003)
-
-### ⚡ 优化
-
-- perf: 优化精英掉落处理，关闭后如检测到选择技能直接选择词条，节省一次循环 (341bb5e)
-
-
 # 更新日志
 
 本项目所有重要变更都记录在此文件中。
@@ -20,7 +5,22 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
 
+（暂无变更）
+
+## [1.0.2] - 2026-09-05
+
+### ✨ 新增
+- 增加 changelog 自动生成脚本，发版时自动生成 changelog (5da54da)
+
+### 🐛 修复
+- 修复 release.py 自动生成 changelog 后工作区不干净导致 bump2version 失败的问题 (fb95003)
+
+### ⚡ 优化
+- 优化精英掉落处理，关闭后如检测到选择技能直接选择词条，节省一次循环 (341bb5e)
+
+## [1.0.1] - 2026-09-05
 
 ### 新增
 - 游戏循环截图间隔改为可配置 `BATTLE_LOOP_INTERVAL`，适应不同战力用户
@@ -66,5 +66,7 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.0...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.2
+[1.0.1]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.1
 [1.0.0]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.0

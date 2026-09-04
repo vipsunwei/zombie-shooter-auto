@@ -149,7 +149,9 @@ def generate_changelog_content(commits, version=None, date=None):
 
 
 def update_changelog_file(content, version=None, date=None):
-    """更新 CHANGELOG.md 文件"""
+    """更新 CHANGELOG.md 文件
+    查找 [未发布] 部分并替换其内容；如果不存在，则在文件头部说明之后插入
+    """
     changelog_path = "CHANGELOG.md"
 
     # 读取现有文件
@@ -157,33 +159,40 @@ def update_changelog_file(content, version=None, date=None):
         with open(changelog_path, 'r', encoding='utf-8') as f:
             existing = f.read()
     except FileNotFoundError:
-        existing = """# Changelog
+        existing = """# 更新日志
 
-所有显著变更都记录在此文件中。
+本项目所有重要变更都记录在此文件中。
 
-格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
+格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## [未发布]
 
 """
 
-    # 生成版本标题
-    if version and date:
-        version_header = f"## [{version}] - {date}"
-    else:
-        version_header = "## [未发布]"
+    # 确保内容前后有空行
+    content = content.strip()
+    if content:
+        content = "\n" + content + "\n"
 
-    # 查找 [未发布] 部分并替换
-    pattern = r'## \[未发布\]\s*\n(.*?)(?=\n## \[|\Z)'
-    match = re.search(pattern, existing, re.DOTALL)
+    # 查找 [未发布] 标题行（行首匹配，避免匹配到链接等其他内容）
+    # 匹配 ## [未发布] 后面的所有内容，直到下一个 ## [ 标题或文件结束
+    pattern = r'(^## \[未发布\][ \t]*\n)(.*?)(?=^## \[|\Z)'
+    match = re.search(pattern, existing, re.MULTILINE | re.DOTALL)
 
     if match:
-        # 替换 [未发布] 部分的内容
-        new_content = existing[:match.start(1)] + "\n" + content + "\n" + existing[match.end(1):]
+        # 替换 [未发布] 部分的内容（保留标题行）
+        new_content = existing[:match.start(2)] + content + existing[match.end(2):]
     else:
-        # 没有找到 [未发布]，在文件开头添加
-        new_content = f"## [未发布]\n\n{content}\n\n" + existing
+        # 没有找到 [未发布]，在第一个 ## [ 版本标题之前插入
+        first_version_match = re.search(r'^## \[', existing, re.MULTILINE)
+        if first_version_match:
+            # 在第一个版本标题之前插入 [未发布] 部分
+            insert_pos = first_version_match.start()
+            new_content = existing[:insert_pos] + f"## [未发布]\n{content}\n" + existing[insert_pos:]
+        else:
+            # 没有任何版本标题，在文件末尾添加
+            new_content = existing.rstrip() + f"\n\n## [未发布]\n{content}\n"
 
     # 写入文件
     with open(changelog_path, 'w', encoding='utf-8') as f:
