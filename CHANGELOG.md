@@ -5,15 +5,18 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
 
+（暂无变更）
+
+## [1.0.4] - 2026-09-05
 
 ### ✨ 新增
-
-- feat: release.py增加自动探测代理功能，有可用代理自动使用代理推送 (edd3f62)
+- release.py 增加自动探测代理功能，有可用代理自动使用代理推送 (edd3f62)
 
 ### 🐛 修复
+- 修正 CHANGELOG 结构混乱，补充 v1.0.3 版本记录 (dc02407)
 
-- fix: 修正CHANGELOG结构混乱，补充v1.0.3版本记录 (dc02407)
 ## [1.0.3] - 2026-09-05
 
 ### 🐛 修复
@@ -76,7 +79,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.3...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.4
 [1.0.3]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.3
 [1.0.2]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.2
 [1.0.1]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.1
