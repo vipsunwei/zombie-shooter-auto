@@ -1054,9 +1054,15 @@ def close_elite_drop():
     if img is not None:
         ocr_screenshot(img)
     if not is_elite_drop(img):
-        print(f"    ✅ 转盘结束后精英掉落已关闭，无需第二次点击")
+        # 检查是否直接弹出了选择技能界面，如果是，直接选择词条（不用等下一次循环）
+        if is_skill_select(img):
+            print(f"    ✅ 精英掉落已关闭，检测到选择技能界面，直接选择词条")
+            do_select_skill()
+            print(f"    → 已选择{SKILL_STRATEGY}卡片(540,989)")
+        else:
+            print(f"    ✅ 转盘结束后精英掉落已关闭，无需第二次点击")
         return True
-    
+
     # 还是精英掉落界面，点第二次左下角关闭
     print(f"    → 确认仍在精英掉落界面，第2次点左下角关闭 {ELITE_TAP}")
     tap(ELITE_TAP)
