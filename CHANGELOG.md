@@ -5,10 +5,12 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [未发布]
 
-（暂无变更）
 
+### 🐛 修复
+
+- refactor: 版本号提取到独立文件version.py，避免每次发版修改主脚本 (64d1b9c)
+- fix: 修正CHANGELOG，补充v1.0.4版本记录 (8e859ac)
 ## [1.0.4] - 2026-09-05
 
 ### ✨ 新增
