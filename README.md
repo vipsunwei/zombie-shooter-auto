@@ -318,10 +318,43 @@ bump2version major    # 主版本号+1：1.0.0 → 2.0.0
 git push && git push --tags
 ```
 
+### CHANGELOG 自动生成
+
+不需要手动写 changelog！`generate_changelog.py` 会基于 git commit 记录自动生成，根据关键词自动分类：
+
+| 分类 | 匹配关键词 |
+|---|---|
+| ✨ 新增 | 增加、新增、添加、实现、支持、feat |
+| 🐛 修复 | 修复、修、bug、解决、fix |
+| ⚡ 优化 | 优化、改进、提升、重构、refactor、perf |
+| 📝 文档 | 文档、README、说明、docs |
+| 🎨 格式 | 格式、style、format |
+| ✅ 测试 | 测试、test |
+| 🔧 构建 | 构建、build、发布、release、依赖 |
+| 📦 其他 | 不匹配以上关键词 |
+
+**手动生成 changelog（不发版）：**
+
+```bash
+# 生成从上一个 tag 到现在的 changelog
+python generate_changelog.py
+
+# 只预览不写入文件
+python generate_changelog.py --dry-run
+
+# 生成全部历史的 changelog
+python generate_changelog.py --all
+```
+
+**发版时自动生成：**
+
+执行 `python release.py patch` 时会自动调用 `generate_changelog.py` 生成 changelog，然后再升级版本号。
+
 ### 版本号存放位置
 
 - `auto_play.py` 中的 `__version__` 变量
 - `.bumpversion.cfg` 配置文件（bump2version 使用）
+- `generate_changelog.py` changelog 自动生成脚本
 - `CHANGELOG.md` 版本变更记录
 
 ## 🤝 贡献

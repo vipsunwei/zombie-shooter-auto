@@ -95,10 +95,40 @@ def check_bump2version():
     else:
         print_color("✅ bump2version 已就绪", Color.GREEN)
 
+def generate_changelog():
+    """自动生成 changelog"""
+    print()
+    print_color("[3/5] 自动生成 CHANGELOG...", Color.YELLOW)
+    print()
+
+    # 调用 generate_changelog.py 生成 changelog
+    result = subprocess.run(
+        [sys.executable, "generate_changelog.py"],
+        capture_output=True,
+        text=True,
+        encoding='utf-8'
+    )
+
+    if result.returncode != 0:
+        print_color("⚠️  changelog 生成失败，跳过（不影响发版）", Color.YELLOW)
+        if result.stderr:
+            print(result.stderr)
+        return
+
+    # 打印生成结果的关键部分
+    output = result.stdout
+    if "已更新 CHANGELOG.md" in output:
+        print_color("✅ CHANGELOG.md 已自动更新", Color.GREEN)
+    elif "没有新的变更" in output:
+        print_color("ℹ️  没有新的变更，changelog 无需更新", Color.CYAN)
+    else:
+        print(output)
+
+
 def bump_version(version_type):
     """执行版本升级"""
     print()
-    print_color(f"[3/4] 升级版本号（{version_type}）...", Color.YELLOW)
+    print_color(f"[4/5] 升级版本号（{version_type}）...", Color.YELLOW)
     print()
 
     # 执行 bump2version
@@ -122,7 +152,7 @@ def bump_version(version_type):
 def push_to_remote():
     """推送到远程仓库"""
     print()
-    print_color("[4/4] 推送到远程仓库...", Color.YELLOW)
+    print_color("[5/5] 推送到远程仓库...", Color.YELLOW)
     print()
 
     # 推送代码
@@ -157,10 +187,13 @@ def main():
     # 2. 检查 bump2version
     check_bump2version()
 
-    # 3. 升级版本号
+    # 3. 自动生成 changelog
+    generate_changelog()
+
+    # 4. 升级版本号
     new_version = bump_version(version_type)
 
-    # 4. 推送到远程
+    # 5. 推送到远程
     push_to_remote()
 
     # 完成
