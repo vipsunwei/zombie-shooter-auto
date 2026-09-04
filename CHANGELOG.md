@@ -5,10 +5,15 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [未发布]
 
-（暂无变更）
 
+### 🔧 重构
+
+- refactor: 优化generate_changelog分类规则，增加重构分类，修复refactor误分类问题 (286074f)
+
+### 🐛 修复
+
+- fix: 修正CHANGELOG，补充v1.0.5版本记录 (8626842)
 ## [1.0.5] - 2026-09-05
 
 ### 🔧 重构
