@@ -109,14 +109,61 @@ def get_commits_since_tag(tag=None):
     return commits
 
 
+# commit message 前缀到分类名的映射（优先匹配）
+PREFIX_TO_CATEGORY = {
+    'feat': '新增',
+    'feature': '新增',
+    'fix': '修复',
+    'bugfix': '修复',
+    'hotfix': '修复',
+    'refactor': '重构',
+    'perf': '优化',
+    'performance': '优化',
+    'docs': '文档',
+    'documentation': '文档',
+    'style': '格式',
+    'format': '格式',
+    'test': '测试',
+    'build': '构建',
+    'ci': '构建',
+    'cd': '构建',
+    'chore': '构建',
+    'release': '构建',
+}
+
+
 def categorize_commit(message):
-    """根据 commit message 分类"""
-    message_lower = message.lower()
+    """根据 commit message 分类
+    优先检查 commit message 前缀（如 feat:、fix:、refactor:），
+    前缀匹配不到再用关键词匹配。
+    """
+    message_lower = message.lower().strip()
+
+    # 1. 优先检查前缀（如 "feat: xxx"、"fix(scope): xxx"）
+    prefix_match = re.match(r'^([a-z]+)(\([^)]*\))?\s*:', message_lower)
+    if prefix_match:
+        prefix = prefix_match.group(1)
+        if prefix in PREFIX_TO_CATEGORY:
+            cat_name = PREFIX_TO_CATEGORY[prefix]
+            for category in CATEGORY_RULES:
+                if category['name'] == cat_name:
+                    return category
+
+    # 2. 前缀匹配不到，再用关键词匹配
     for category in CATEGORY_RULES:
         for keyword in category['keywords']:
             if keyword.lower() in message_lower:
                 return category
     return OTHER_CATEGORY
+
+
+def clean_commit_message(message):
+    """清理 commit message，去掉 conventional commit 前缀（如 feat:、fix:、refactor(scope):）"""
+    # 匹配前缀：type(scope): 或 type:
+    match = re.match(r'^[a-z]+(\([^)]*\))?\s*:\s*(.*)$', message, re.IGNORECASE)
+    if match:
+        return match.group(2).strip()
+    return message.strip()
 
 
 def generate_changelog_content(commits, version=None, date=None):
@@ -147,7 +194,9 @@ def generate_changelog_content(commits, version=None, date=None):
             lines.append(f"### {cat['emoji']} {cat_name}")
             lines.append("")
             for commit in cat['commits']:
-                lines.append(f"- {commit['message']} ({commit['hash']})")
+                # 清理 commit message，去掉前缀
+                clean_msg = clean_commit_message(commit['message'])
+                lines.append(f"- {clean_msg} ({commit['hash']})")
             lines.append("")
 
     return '\n'.join(lines)

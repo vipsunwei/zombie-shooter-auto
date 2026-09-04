@@ -5,15 +5,18 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
 
+（暂无变更）
+
+## [1.0.6] - 2026-09-05
 
 ### 🔧 重构
-
-- refactor: 优化generate_changelog分类规则，增加重构分类，修复refactor误分类问题 (286074f)
+- 优化generate_changelog分类规则，增加重构分类，修复refactor误分类问题 (286074f)
 
 ### 🐛 修复
+- 修正CHANGELOG，补充v1.0.5版本记录 (8626842)
 
-- fix: 修正CHANGELOG，补充v1.0.5版本记录 (8626842)
 ## [1.0.5] - 2026-09-05
 
 ### 🔧 重构
@@ -92,7 +95,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.5...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.6
 [1.0.5]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.5
 [1.0.4]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.4
 [1.0.3]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.3
