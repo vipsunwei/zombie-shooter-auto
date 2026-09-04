@@ -286,6 +286,18 @@ MIT License
 
 使用 `release.py` 一键完成：升级版本号 → 更新CHANGELOG → 提交 → 打tag → 推送。
 
+**⚠️ 重要：发版前请先预览，确认 changelog 内容正确！**
+
+```bash
+# 预览模式：只显示将生成的 changelog 内容，不修改任何文件
+python release.py patch --dry-run
+
+# 确认无误后，真正发版
+python release.py patch
+```
+
+**升级版本类型：**
+
 ```bash
 # 升级修订号：1.0.0 → 1.0.1（修bug）
 python release.py patch
@@ -300,8 +312,11 @@ python release.py major
 脚本会自动完成：
 1. 检查 Git 仓库状态
 2. 检查并安装 bump2version（如未安装）
-3. 执行 bump2version 升级版本号（自动修改代码、更新CHANGELOG、提交、打tag）
-4. 推送到远程仓库（代码 + tag）
+3. 在内存中生成 changelog 内容（基于 git commit 自动分类）
+4. 手动更新 CHANGELOG.md 版本号（不依赖 bump2version，更可靠）
+5. 自动更新底部链接定义（`[未发布]` compare 链接 + `[新版本号]` release 链接）
+6. 执行 bump2version 升级版本号（只修改 version.py，自动提交、打tag）
+7. 自动探测代理并推送到远程仓库（代码 + tag）
 
 ### 手动发布（不使用脚本）
 
@@ -325,13 +340,16 @@ git push && git push --tags
 | 分类 | 匹配关键词 |
 |---|---|
 | ✨ 新增 | 增加、新增、添加、实现、支持、feat |
-| 🐛 修复 | 修复、修、bug、解决、fix |
-| ⚡ 优化 | 优化、改进、提升、重构、refactor、perf |
-| 📝 文档 | 文档、README、说明、docs |
-| 🎨 格式 | 格式、style、format |
-| ✅ 测试 | 测试、test |
-| 🔧 构建 | 构建、build、发布、release、依赖 |
+| 🔧 重构 | 重构、refactor、重写、拆分、提取 |
+| 🐛 修复 | 修复、bug、解决、fix、bugfix、hotfix、修正、修补 |
+| ⚡ 优化 | 优化、改进、提升、perf、performance、调整 |
+| 📝 文档 | 文档、README、说明、docs、changelog |
+| 🎨 格式 | 格式、style、format、lint、代码风格 |
+| ✅ 测试 | 测试、test、单元测试 |
+| 🔨 构建 | 构建、build、ci、cd、部署、release、发布、chore、依赖 |
 | 📦 其他 | 不匹配以上关键词 |
+
+> 💡 **分类优先级**：优先匹配 commit message 前缀（如 `feat:`、`fix:`、`refactor:`），前缀匹配不到再用关键词匹配。自动去掉 commit message 中的前缀，保持 changelog 简洁。
 
 **手动生成 changelog（不发版）：**
 
@@ -352,10 +370,29 @@ python generate_changelog.py --all
 
 ### 版本号存放位置
 
-- `auto_play.py` 中的 `__version__` 变量
-- `.bumpversion.cfg` 配置文件（bump2version 使用）
-- `generate_changelog.py` changelog 自动生成脚本
+- `version.py` 中的 `__version__` 变量（独立文件，避免每次发版修改主脚本）
+- `.bumpversion.cfg` 配置文件（bump2version 使用，只修改 version.py）
+- `changelog_utils.py` changelog 公共函数库（版本号读取、计算、更新）
+- `generate_changelog.py` changelog 自动生成脚本（基于 git commit）
+- `release.py` 一键发布脚本（含 `--dry-run` 预览模式）
 - `CHANGELOG.md` 版本变更记录
+
+### 项目文件结构
+
+```
+zombie-shooter-auto/
+├── auto_play.py              # 主自动化脚本（状态机 + EasyOCR + 多模拟器支持）
+├── launcher.py               # 热更新启动器（监控文件变化自动重启）
+├── release.py                # 一键发布脚本（含 --dry-run 预览模式）
+├── generate_changelog.py     # changelog 自动生成脚本（基于 git commit）
+├── changelog_utils.py        # changelog 公共函数库（版本号读取、计算、更新）
+├── version.py                # 版本号独立文件（避免每次发版修改主脚本）
+├── .bumpversion.cfg          # bump2version 配置
+├── .gitignore                # Git 忽略规则
+├── README.md                 # 项目说明文档
+├── CHANGELOG.md              # 版本变更记录
+└── requirements.txt          # Python 依赖包列表
+```
 
 ## 🤝 贡献
 
