@@ -5,12 +5,18 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
 
+（暂无变更）
+
+## [1.0.5] - 2026-09-05
+
+### 🔧 重构
+- 版本号提取到独立文件 version.py，避免每次发版修改主脚本 (64d1b9c)
 
 ### 🐛 修复
+- 修正 CHANGELOG，补充 v1.0.4 版本记录 (8e859ac)
 
-- refactor: 版本号提取到独立文件version.py，避免每次发版修改主脚本 (64d1b9c)
-- fix: 修正CHANGELOG，补充v1.0.4版本记录 (8e859ac)
 ## [1.0.4] - 2026-09-05
 
 ### ✨ 新增
@@ -81,7 +87,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.4...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.5
 [1.0.4]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.4
 [1.0.3]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.3
 [1.0.2]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.2
