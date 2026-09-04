@@ -9,6 +9,16 @@
 
 （暂无变更）
 
+## [1.0.8] - 2026-09-05
+
+### 🐛 修复
+
+- 修复CHANGELOG底部链接定义缺失问题，发版时自动更新链接定义 (01318db)
+
+### 📝 文档
+
+- 更新README，增加--dry-run预览模式说明、重构分类、项目文件结构 (ecbae04)
+
 ## [1.0.7] - 2026-09-05
 
 ### ✨ 新增
@@ -105,7 +115,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.7...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.8...HEAD
+[1.0.8]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.8
 [1.0.7]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.7
 [1.0.6]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.6
 [1.0.5]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.5
