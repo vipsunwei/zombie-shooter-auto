@@ -262,14 +262,7 @@ powercfg /change hibernate-timeout-ac 0
 
 ## 📝 更新日志
 
-### v1.0.0
-- 初始版本
-- 支持 MuMu / 雷电模拟器
-- OCR 文字识别
-- 状态机架构
-- 交互式模拟器选择
-- 热更新支持
-- 自动清理截图
+完整的版本更新记录请查看 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 📄 许可证
 
