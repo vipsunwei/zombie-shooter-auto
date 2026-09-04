@@ -13,6 +13,7 @@
 
 import sys
 import os
+import socket
 import subprocess
 
 # 颜色输出
@@ -34,6 +35,27 @@ def print_header(text):
     print_color(f"  {text}", Color.CYAN)
     print_color("=" * 55, Color.CYAN)
     print()
+
+
+# 常见代理端口（Clash、V2Ray、Shadowsocks等）
+COMMON_PROXY_PORTS = [7897, 7890, 1080, 10809, 8080, 3128, 20171, 9090]
+
+def detect_proxy():
+    """自动探测本地是否有可用的代理
+    返回: 代理地址（如 "http://127.0.0.1:7897"）或 None
+    """
+    for port in COMMON_PROXY_PORTS:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)  # 超时0.5秒，快速探测
+            result = sock.connect_ex(("127.0.0.1", port))
+            sock.close()
+            if result == 0:
+                return f"http://127.0.0.1:{port}"
+        except Exception:
+            continue
+    return None
+
 
 def run_cmd(cmd, check=True, capture_output=False):
     """执行命令，返回结果"""
@@ -152,18 +174,29 @@ def bump_version(version_type):
     return "unknown"
 
 def push_to_remote():
-    """推送到远程仓库"""
+    """推送到远程仓库（自动探测代理）"""
     print()
     print_color("[5/5] 推送到远程仓库...", Color.YELLOW)
     print()
 
+    # 自动探测代理
+    proxy = detect_proxy()
+    if proxy:
+        print_color(f"🔍 检测到可用代理: {proxy}", Color.CYAN)
+        push_cmd = f'git -c http.proxy={proxy} -c https.proxy={proxy} push'
+        push_tags_cmd = f'git -c http.proxy={proxy} -c https.proxy={proxy} push --tags'
+    else:
+        print_color("ℹ️  未检测到代理，直接推送", Color.CYAN)
+        push_cmd = "git push"
+        push_tags_cmd = "git push --tags"
+
     # 推送代码
-    print("→ git push")
-    run_cmd("git push")
+    print(f"→ {push_cmd}")
+    run_cmd(push_cmd)
 
     # 推送 tag
-    print("→ git push --tags")
-    run_cmd("git push --tags")
+    print(f"→ {push_tags_cmd}")
+    run_cmd(push_tags_cmd)
 
     print()
     print_color("✅ 推送完成", Color.GREEN)
