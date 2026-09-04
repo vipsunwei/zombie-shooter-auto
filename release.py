@@ -119,6 +119,8 @@ def generate_changelog():
     output = result.stdout
     if "已更新 CHANGELOG.md" in output:
         print_color("✅ CHANGELOG.md 已自动更新", Color.GREEN)
+        # git add CHANGELOG.md，让 bump2version 提交时包含这个修改
+        run_cmd("git add CHANGELOG.md")
     elif "没有新的变更" in output:
         print_color("ℹ️  没有新的变更，changelog 无需更新", Color.CYAN)
     else:
@@ -131,8 +133,8 @@ def bump_version(version_type):
     print_color(f"[4/5] 升级版本号（{version_type}）...", Color.YELLOW)
     print()
 
-    # 执行 bump2version
-    run_cmd(f"bump2version {version_type}")
+    # 执行 bump2version（--allow-dirty 允许工作区有已暂存的 changelog 修改）
+    run_cmd(f"bump2version {version_type} --allow-dirty")
 
     print()
     print_color("✅ 版本升级完成", Color.GREEN)
