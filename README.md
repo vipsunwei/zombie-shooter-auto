@@ -282,7 +282,28 @@ MIT License
    └─ 主版本号：不兼容的API变更（如 1.0.0 → 2.0.0）
 ```
 
-### 发布新版本
+### 发布新版本（推荐：一键发布脚本）
+
+使用 `release.ps1` 一键完成：升级版本号 → 更新CHANGELOG → 提交 → 打tag → 推送。
+
+```powershell
+# 升级修订号：1.0.0 → 1.0.1（修bug）
+.\release.ps1 patch
+
+# 升级次版本号：1.0.0 → 1.1.0（加功能）
+.\release.ps1 minor
+
+# 升级主版本号：1.0.0 → 2.0.0（大改不兼容）
+.\release.ps1 major
+```
+
+脚本会自动完成：
+1. 检查 Git 仓库状态
+2. 检查并安装 bump2version（如未安装）
+3. 执行 bump2version 升级版本号（自动修改代码、更新CHANGELOG、提交、打tag）
+4. 推送到远程仓库（代码 + tag）
+
+### 手动发布（不使用脚本）
 
 ```bash
 # 1. 安装 bump2version（只需安装一次）
