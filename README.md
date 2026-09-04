@@ -268,6 +268,41 @@ powercfg /change hibernate-timeout-ac 0
 
 MIT License
 
+## 🔖 版本管理
+
+本项目使用 [语义化版本](https://semver.org/lang/zh-CN/) 和 [bump2version](https://github.com/c4urself/bump2version) 进行版本管理。
+
+### 版本号格式
+
+```
+主版本号.次版本号.修订号
+   │       │       │
+   │       │       └─ 修订号：bug修复，不影响功能（如 1.0.0 → 1.0.1）
+   │       └─ 次版本号：新增功能，向后兼容（如 1.0.0 → 1.1.0）
+   └─ 主版本号：不兼容的API变更（如 1.0.0 → 2.0.0）
+```
+
+### 发布新版本
+
+```bash
+# 1. 安装 bump2version（只需安装一次）
+pip install bump2version
+
+# 2. 升级版本号（自动修改代码、更新CHANGELOG、提交、打tag）
+bump2version patch    # 修订号+1：1.0.0 → 1.0.1
+bump2version minor    # 次版本号+1：1.0.0 → 1.1.0
+bump2version major    # 主版本号+1：1.0.0 → 2.0.0
+
+# 3. 推送到远程（包含tag）
+git push && git push --tags
+```
+
+### 版本号存放位置
+
+- `auto_play.py` 中的 `__version__` 变量
+- `.bumpversion.cfg` 配置文件（bump2version 使用）
+- `CHANGELOG.md` 版本变更记录
+
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！

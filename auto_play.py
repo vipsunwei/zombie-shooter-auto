@@ -41,6 +41,9 @@ import numpy as np
 from PIL import Image
 import easyocr
 
+# 版本号（语义化版本：主版本.次版本.修订号）
+__version__ = "1.0.0"
+
 # ============================================================
 #  配置区（根据需要修改）
 # ============================================================
@@ -1093,7 +1096,7 @@ def main():
     emulator_display = {"mumu": "MuMu", "ldplayer": "雷电", "auto": "自动检测"}.get(EMULATOR_TYPE, EMULATOR_TYPE)
     
     print("=" * 55)
-    print("   向僵尸开炮 · 自动闯关脚本")
+    print(f"   向僵尸开炮 · 自动闯关脚本 v{__version__}")
     print("=" * 55)
     print(f"  模拟器: {emulator_display}（可用参数: mumu / leidian）")
     print(f"  策略 : 技能选 {SKILL_STRATEGY} 卡片")
