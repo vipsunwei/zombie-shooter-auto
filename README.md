@@ -9,7 +9,7 @@
 - **多模拟器支持**：自动检测 MuMu / 雷电模拟器，也可手动指定
 - **交互式选择**：启动时弹出菜单，上下箭头选择模拟器
 - **验证式操作**：每次点击后截图验证，确认成功才继续，防止乱点
-- **热更新支持**：配合 launcher.py，修改脚本后自动重启
+- **热更新支持**：配合 launcher.py，修改任意模块后自动重启（监控整个项目目录的 .py 文件）
 - **自动清理截图**：每关通关后自动清理本关截图
 - **智能词条选择**：支持按优先级选择最优词条，未配置的随机选择（更像人在玩）
 
@@ -122,27 +122,44 @@ python auto_play.py --help
 
 ### 热更新模式（开发用）
 
-修改脚本后自动重启，无需手动停止：
+修改任意模块后自动重启，无需手动停止：
 
 ```bash
 python launcher.py
 ```
 
-- 监控 `auto_play.py` 文件变化
-- 修改保存后自动重启脚本
+- 监控项目目录下**所有 `.py` 文件**变化（含 `auto_play.py` 及各子模块 `config/device/vision/states/popups/skills/rewards`）
+- 修改任意模块保存后自动重启脚本
 - 按 `Ctrl+C` 停止
 
 > 💡 **开发提示**：launcher.py 默认传入 `auto` 参数（自动检测模拟器），不会弹出选择菜单，热更新重启后能直接继续运行。如需指定模拟器，编辑 launcher.py 顶部的 `EMULATOR_ARG` 变量即可。
 
+## 🧪 单元测试
+
+项目包含 pytest 单元测试，覆盖坐标缩放、OCR 文字检索、波次像素判定、宝箱发光判定、剩余次数解析、模拟器名归一化等纯函数（不依赖真实模拟器/截图）。
+
+```bash
+# 安装测试依赖（已写入 requirements.txt）
+pip install -r requirements.txt
+
+# 运行全部测试
+python -m pytest tests/ -q
+
+# 运行单个测试文件
+python -m pytest tests/test_vision.py -q
+```
+
+> 💡 测试在内存中注入假 OCR 结果或合成图片，无需连接模拟器，可在任何环境快速验证重构是否破坏既有行为。
+
 ## ⚙️ 配置说明
 
-编辑 `auto_play.py` 顶部的配置区：
+编辑 `config.py` 顶部的「用户可配置项」区（坐标、检测区域、颜色阈值等也都集中在 `config.py`）：
 
 ```python
-# 模拟器类型: "mumu"=MuMu | "ldplayer"=雷电 | "auto"=自动检测
+# 模拟器类型: "mumu"=MuMu | "ldplayer"=雷电 | "auto"=自动检测（运行时由命令行参数覆盖）
 EMULATOR_TYPE = "mumu"
 
-# 技能选择策略: "left"=左 | "middle"=中 | "right"=右 | "random"=随机
+# 技能选择策略: "left"=左 | "middle"=中 | "right"=右 | "random"=随机（可被 skill_config.py 覆盖）
 SKILL_STRATEGY = "middle"
 
 # 游戏循环中每次检测间隔（秒）
@@ -155,6 +172,9 @@ CHECK_INTERVAL = 0.8
 
 # 每关通关后是否自动清理截图（模拟器内 + 本地临时文件）
 CLEAN_SCREENSHOT_PER_LEVEL = True
+
+# 波次区白色像素占比阈值（判定是否处于战斗中）
+WAVE_WHITE_THRESHOLD = 3.5
 ```
 
 ## 🎯 词条优先级配置（推荐）
@@ -165,8 +185,9 @@ CLEAN_SCREENSHOT_PER_LEVEL = True
 
 ```
 zombie-shooter-auto/
-├── auto_play.py
-├── skill_config.py    ← 词条优先级配置文件
+├── auto_play.py          # 主入口
+├── config.py             # 全局配置/坐标
+├── skill_config.py       # 词条优先级配置文件（可选）
 └── ...
 ```
 
@@ -378,29 +399,29 @@ MIT License
 
 ### 发布新版本（推荐：一键发布脚本）
 
-使用 `release.py` 一键完成：升级版本号 → 更新CHANGELOG → 提交 → 打tag → 推送。
+使用 `tools/release.py` 一键完成：升级版本号 → 更新CHANGELOG → 提交 → 打tag → 推送。
 
 **⚠️ 重要：发版前请先预览，确认 changelog 内容正确！**
 
 ```bash
 # 预览模式：只显示将生成的 changelog 内容，不修改任何文件
-python release.py patch --dry-run
+python tools/release.py patch --dry-run
 
 # 确认无误后，真正发版
-python release.py patch
+python tools/release.py patch
 ```
 
 **升级版本类型：**
 
 ```bash
 # 升级修订号：1.0.0 → 1.0.1（修bug）
-python release.py patch
+python tools/release.py patch
 
 # 升级次版本号：1.0.0 → 1.1.0（加功能）
-python release.py minor
+python tools/release.py minor
 
 # 升级主版本号：1.0.0 → 2.0.0（大改不兼容）
-python release.py major
+python tools/release.py major
 ```
 
 脚本会自动完成：
@@ -429,7 +450,7 @@ git push && git push --tags
 
 ### CHANGELOG 自动生成
 
-不需要手动写 changelog！`generate_changelog.py` 会基于 git commit 记录自动生成，根据关键词自动分类：
+不需要手动写 changelog！`tools/generate_changelog.py` 会基于 git commit 记录自动生成，根据关键词自动分类：
 
 | 分类 | 匹配关键词 |
 |---|---|
@@ -449,38 +470,52 @@ git push && git push --tags
 
 ```bash
 # 生成从上一个 tag 到现在的 changelog
-python generate_changelog.py
+python tools/generate_changelog.py
 
 # 只预览不写入文件
-python generate_changelog.py --dry-run
+python tools/generate_changelog.py --dry-run
 
 # 生成全部历史的 changelog
-python generate_changelog.py --all
+python tools/generate_changelog.py --all
 ```
 
 **发版时自动生成：**
 
-执行 `python release.py patch` 时会自动调用 `generate_changelog.py` 生成 changelog，然后再升级版本号。
+执行 `python tools/release.py patch` 时会自动调用 `tools/generate_changelog.py` 生成 changelog，然后再升级版本号。
 
 ### 版本号存放位置
 
 - `version.py` 中的 `__version__` 变量（独立文件，避免每次发版修改主脚本）
 - `.bumpversion.cfg` 配置文件（bump2version 使用，只修改 version.py）
-- `changelog_utils.py` changelog 公共函数库（版本号读取、计算、更新）
-- `generate_changelog.py` changelog 自动生成脚本（基于 git commit）
-- `release.py` 一键发布脚本（含 `--dry-run` 预览模式）
+- `tools/changelog_utils.py` changelog 公共函数库（版本号读取、计算、更新）
+- `tools/generate_changelog.py` changelog 自动生成脚本（基于 git commit）
+- `tools/release.py` 一键发布脚本（含 `--dry-run` 预览模式）
 - `CHANGELOG.md` 版本变更记录
 
 ### 项目文件结构
 
 ```
 zombie-shooter-auto/
-├── auto_play.py              # 主自动化脚本（状态机 + RapidOCR + 多模拟器支持）
-├── skill_config.py           # 词条优先级配置文件（可选，缺失时自动降级随机）
-├── launcher.py               # 热更新启动器（监控文件变化自动重启）
-├── release.py                # 一键发布脚本（含 --dry-run 预览模式）
-├── generate_changelog.py     # changelog 自动生成脚本（基于 git commit）
-├── changelog_utils.py        # changelog 公共函数库（版本号读取、计算、更新）
+├── auto_play.py              # 主入口（main 主循环 + 命令行参数解析）
+├── config.py                 # 全局配置/坐标/REGION/运行时状态/坐标缩放（所有模块共享）
+├── device.py                 # 设备控制：ADB/截图/tap/模拟器检测/底部导航/兜底返回/清理
+├── vision.py                 # OCR 封装 + 文字检索 + 波次像素辅助
+├── states.py                 # 界面判定（所有 is_* 纯判定，不依赖设备操作）
+├── popups.py                 # 弹窗关闭（所有 close_* + 点击空白关闭）
+├── skills.py                 # 词条配置热加载与智能选择
+├── rewards.py                # 奖励/宝箱/胜利结算/关卡切换
+├── skill_config.py           # 词条优先级配置文件（可选，缺失时降级随机）
+├── launcher.py               # 热更新启动器（监控整目录 .py 自动重启）
+├── tools/                    # 发布工具
+│   ├── release.py            #   一键发布脚本（含 --dry-run 预览模式）
+│   ├── generate_changelog.py #   changelog 自动生成脚本（基于 git commit）
+│   └── changelog_utils.py    #   changelog 公共函数库（版本号读取、计算、更新）
+├── tests/                    # 单元测试（pytest）
+│   ├── test_config.py
+│   ├── test_vision.py
+│   ├── test_states.py
+│   ├── test_rewards.py
+│   └── test_auto_play.py
 ├── version.py                # 版本号独立文件（避免每次发版修改主脚本）
 ├── .bumpversion.cfg          # bump2version 配置
 ├── .gitignore                # Git 忽略规则
@@ -488,6 +523,8 @@ zombie-shooter-auto/
 ├── CHANGELOG.md              # 版本变更记录
 └── requirements.txt          # Python 依赖包列表
 ```
+
+> 📐 **模块化设计**：代码从单文件巨石 `auto_play.py` 拆分为扁平多模块。全局共享状态集中在 `config.py`；常量用 `from config import *` 裸名访问，运行时可变变量（如分辨率、OCR 缓存、状态机开关）必须经由 `config.xxx` 读写，避免 import 副本失效。`auto_play.py` 只负责组合各模块并运行主循环。
 
 ## 🤝 贡献
 

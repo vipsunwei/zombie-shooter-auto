@@ -5,16 +5,22 @@
 =====================
 基于 git commit 记录自动生成 changelog，根据关键词自动分类为新增/修复/优化/文档等。
 
-使用方法：
-  python generate_changelog.py           # 生成从上一个 tag 到现在的 changelog
-  python generate_changelog.py --all     # 生成全部历史的 changelog
-  python generate_changelog.py --dry-run # 只打印不写入文件
+使用方法（在项目根目录执行）：
+  python tools/generate_changelog.py           # 生成从上一个 tag 到现在的 changelog
+  python tools/generate_changelog.py --all     # 生成全部历史的 changelog
+  python tools/generate_changelog.py --dry-run # 只打印不写入文件
+
+路径说明：本文件位于 tools/ 下，CHANGELOG.md 在项目根目录（tools 的父目录）。
 """
 
 import subprocess
 import re
 import sys
+import os
 from datetime import datetime
+
+# 项目根目录（tools 的父目录）
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 分类规则：关键词 → 分类
 CATEGORY_RULES = [
@@ -74,7 +80,7 @@ def run_cmd(cmd, capture_output=True):
         shell=True,
         capture_output=capture_output,
         text=True,
-        encoding='utf-8'
+        encoding='utf-8', errors='replace'
     )
     return result.stdout.strip()
 
@@ -134,7 +140,7 @@ PREFIX_TO_CATEGORY = {
 
 def categorize_commit(message):
     """根据 commit message 分类
-    优先检查 commit message 前缀（如 feat:、fix:、refactor:），
+    优先检查 commit message 前缀（如 feat:、fix:、refactor(scope):），
     前缀匹配不到再用关键词匹配。
     """
     message_lower = message.lower().strip()
@@ -206,7 +212,7 @@ def update_changelog_file(content, version=None, date=None):
     """更新 CHANGELOG.md 文件
     查找 [未发布] 部分并替换其内容；如果不存在，则在文件头部说明之后插入
     """
-    changelog_path = "CHANGELOG.md"
+    changelog_path = os.path.join(BASE_DIR, "CHANGELOG.md")
 
     # 读取现有文件
     try:
@@ -305,7 +311,7 @@ def main():
     changelog_path = update_changelog_file(content)
     print(f"✅ 已更新 {changelog_path}")
     print()
-    print("💡 提示：发版时执行 `python release.py patch` 会自动生成 changelog 并发布")
+    print("💡 提示：发版时执行 `python tools/release.py patch` 会自动生成 changelog 并发布")
 
 
 if __name__ == "__main__":

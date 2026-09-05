@@ -4,16 +4,21 @@
 Changelog 工具函数
 ==================
 被 release.py 和 preview_changelog.py 共同引用，确保预览和真实发版的逻辑完全一致。
+
+路径说明：本文件位于 tools/ 下，version.py 与 CHANGELOG.md 在项目根目录（tools 的父目录）。
 """
 
 import re
 import os
 from datetime import datetime
 
+# 项目根目录（tools 的父目录）
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def get_current_version():
     """从 version.py 读取当前版本号"""
-    version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'version.py')
+    version_path = os.path.join(BASE_DIR, 'version.py')
     with open(version_path, 'r', encoding='utf-8') as f:
         content = f.read()
     match = re.search(r'__version__\s*=\s*"([^"]+)"', content)
@@ -52,7 +57,7 @@ def update_changelog_version(new_version, changelog_path=None):
     返回: (success: bool, message: str)
     """
     if changelog_path is None:
-        changelog_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'CHANGELOG.md')
+        changelog_path = os.path.join(BASE_DIR, 'CHANGELOG.md')
 
     today = datetime.now().strftime('%Y-%m-%d')
 
@@ -121,13 +126,13 @@ def simulate_changelog_update(new_version, changelog_path=None, unreleased_conte
 
     参数:
         new_version: 新版本号
-        changelog_path: CHANGELOG.md 路径（可选，默认自动查找）
+        changelog_path: CHANGELOG.md 路径（可选，默认项目根）
         unreleased_content: 预先生成的 [未发布] 内容（可选，提供则用此内容替换当前 [未发布]）
 
     返回: (success: bool, preview_content: str, message: str)
     """
     if changelog_path is None:
-        changelog_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'CHANGELOG.md')
+        changelog_path = os.path.join(BASE_DIR, 'CHANGELOG.md')
 
     today = datetime.now().strftime('%Y-%m-%d')
 

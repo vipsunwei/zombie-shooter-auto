@@ -5,10 +5,13 @@
 ==========================
 使用 bump2version 自动升级版本号，更新 CHANGELOG.md，提交代码，打 Git tag，然后推送到远程仓库。
 
-使用方法：
-  python release.py patch    # 升级修订号：1.0.0 → 1.0.1（修bug）
-  python release.py minor    # 升级次版本号：1.0.0 → 1.1.0（加功能）
-  python release.py major    # 升级主版本号：1.0.0 → 2.0.0（大改不兼容）
+使用方法（在项目根目录执行）：
+  python tools/release.py patch    # 升级修订号：1.0.0 → 1.0.1（修bug）
+  python tools/release.py minor    # 升级次版本号：1.0.0 → 1.1.0（加功能）
+  python tools/release.py major    # 升级主版本号：1.0.0 → 2.0.0（大改不兼容）
+
+路径说明：本文件位于 tools/ 下，同级引用 changelog_utils / generate_changelog；
+version.py 与 CHANGELOG.md 在项目根目录（tools 的父目录），由 changelog_utils 处理。
 """
 
 import sys
@@ -16,6 +19,15 @@ import os
 import socket
 import subprocess
 import re
+import configparser
+
+# tools 目录（本文件所在目录），用于定位同级的 generate_changelog.py
+TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+# 项目根目录（tools 的父目录），version.py / CHANGELOG.md 在此
+ROOT_DIR = os.path.dirname(TOOLS_DIR)
+# 显式将 tools 目录加入 sys.path，确保 `from changelog_utils / generate_changelog import`
+# 在 `python tools/release.py` 与 `python -m tools.release` 等不同调用方式下都能成功
+sys.path.insert(0, TOOLS_DIR)
 
 # 从 changelog_utils 导入公共函数，确保预览和真实发版逻辑完全一致
 from changelog_utils import (
@@ -30,6 +42,7 @@ from generate_changelog import (
     get_last_tag as get_last_tag_changelog,
     get_commits_since_tag,
     generate_changelog_content,
+    update_changelog_file,
 )
 
 # 颜色输出
@@ -82,7 +95,7 @@ def run_cmd(cmd, check=True, capture_output=False):
             check=check,
             capture_output=capture_output,
             text=True,
-            encoding='utf-8'
+            encoding='utf-8', errors='replace'
         )
         return result
     except subprocess.CalledProcessError as e:
@@ -97,9 +110,10 @@ def run_cmd(cmd, check=True, capture_output=False):
 
 def check_git_repo():
     """检查是否在 git 仓库中"""
-    print_color("[1/4] 检查 Git 仓库状态...", Color.YELLOW)
+    print_color("[1/7] 检查 Git 仓库状态...", Color.YELLOW)
 
-    if not os.path.exists('.git'):
+    result = run_cmd("git rev-parse --is-inside-work-tree", capture_output=True, check=False)
+    if getattr(result, 'returncode', 1) != 0:
         print_color("❌ 错误：当前目录不是 Git 仓库", Color.RED)
         sys.exit(1)
 
@@ -118,7 +132,7 @@ def check_git_repo():
 def check_bump2version():
     """检查 bump2version 是否安装，未安装则自动安装"""
     print()
-    print_color("[2/4] 检查 bump2version...", Color.YELLOW)
+    print_color("[2/7] 检查 bump2version...", Color.YELLOW)
 
     # 用模块导入方式检查（最可靠，bump2version 不支持 --version 参数）
     result = subprocess.run(
@@ -132,53 +146,80 @@ def check_bump2version():
         run_cmd(f'"{sys.executable}" -m pip install bump2version')
         print_color("✅ bump2version 安装完成", Color.GREEN)
 
+
+def check_version_sync():
+    """校验 version.py 与 .bumpversion.cfg 的版本号一致（双源真值必须同步）
+
+    bump2version 以 cfg 里的 current_version 做 search/replace，
+    release.py 的 CHANGELOG 更新以 version.py 为准。两者不同步时
+    bump2version 必失败，且此时 CHANGELOG 已被修改，留下半完成状态。
+    """
+    print_color("[3/7] 校验版本号一致性...", Color.YELLOW)
+
+    cfg_path = os.path.join(ROOT_DIR, '.bumpversion.cfg')
+    parser = configparser.ConfigParser()
+    parser.read(cfg_path, encoding='utf-8')
+    cfg_version = parser['bumpversion']['current_version'].strip()
+    py_version = get_current_version()
+    if cfg_version != py_version:
+        print_color(f"❌ 版本号不同步：version.py={py_version}，.bumpversion.cfg={cfg_version}", Color.RED)
+        print_color("   请先手动统一两者后再发版", Color.RED)
+        sys.exit(1)
+    print_color(f"✅ 版本号一致：v{py_version}", Color.GREEN)
+
 def generate_changelog():
-    """自动生成 changelog"""
+    """自动生成 changelog（进程内直接调用 generate_changelog 模块函数）
+
+    不再以子进程方式运行 generate_changelog.py：子进程在 Windows 管道下
+    默认按 GBK 输出中文，而父进程按 utf-8 解码，遇到中文输出会直接
+    UnicodeDecodeError，或字符串匹配失败导致 git add 被跳过、changelog
+    改动丢失。进程内调用彻底消除编码握手问题。
+    """
     print()
-    print_color("[3/5] 自动生成 CHANGELOG...", Color.YELLOW)
+    print_color("[4/7] 自动生成 CHANGELOG...", Color.YELLOW)
     print()
 
-    # 调用 generate_changelog.py 生成 changelog
-    result = subprocess.run(
-        [sys.executable, "generate_changelog.py"],
-        capture_output=True,
-        text=True,
-        encoding='utf-8'
-    )
-
-    if result.returncode != 0:
-        print_color("⚠️  changelog 生成失败，跳过（不影响发版）", Color.YELLOW)
-        if result.stderr:
-            print(result.stderr)
+    try:
+        last_tag = get_last_tag_changelog()
+        if last_tag:
+            print_color(f"📋 获取从 tag {last_tag} 到现在的 commit...", Color.CYAN)
+            commits = get_commits_since_tag(last_tag)
+        else:
+            print_color("📋 未找到 tag，获取全部历史 commit...", Color.CYAN)
+            commits = get_commits_since_tag(None)
+    except Exception as e:
+        print_color(f"⚠️  changelog 生成失败，跳过（不影响发版）：{e}", Color.YELLOW)
         return
 
-    # 打印生成结果的关键部分
-    output = result.stdout
-    if "已更新 CHANGELOG.md" in output:
-        print_color("✅ CHANGELOG.md 已自动更新", Color.GREEN)
-        # git add CHANGELOG.md，让 bump2version 提交时包含这个修改
-        run_cmd("git add CHANGELOG.md")
-    elif "没有新的变更" in output:
+    print_color(f"   共 {len(commits)} 个 commit", Color.CYAN)
+    if not commits:
         print_color("ℹ️  没有新的变更，changelog 无需更新", Color.CYAN)
-    else:
-        print(output)
+        return
+
+    content = generate_changelog_content(commits)
+    update_changelog_file(content)
+    print_color("✅ CHANGELOG.md 已自动更新", Color.GREEN)
+    # git add CHANGELOG.md，让 bump2version 提交时包含这个修改
+    run_cmd(f"git add "{os.path.join(ROOT_DIR, 'CHANGELOG.md')}"")
 
 
 def bump_version(version_type):
     """执行版本升级"""
     print()
-    print_color(f"[4/5] 升级版本号（{version_type}）...", Color.YELLOW)
+    print_color(f"[6/7] 升级版本号（{version_type}）...", Color.YELLOW)
     print()
 
-    # 执行 bump2version（--allow-dirty 允许工作区有已暂存的 changelog 修改）
-    run_cmd(f"bump2version {version_type} --allow-dirty")
+    # 用当前解释器执行 bump2version（与 check_bump2version 的检查环境一致，
+    # 避免 shell PATH 中的 bump2version 属于另一个 Python 环境的问题）
+    run_cmd(f'"{sys.executable}" -m bumpversion {version_type} --allow-dirty')
 
     print()
     print_color("✅ 版本升级完成", Color.GREEN)
     print()
 
     # 读取新版本号（从 version.py）
-    with open('version.py', 'r', encoding='utf-8') as f:
+    version_path = os.path.join(ROOT_DIR, 'version.py')
+    with open(version_path, 'r', encoding='utf-8') as f:
         version_content = f.read()
     match = re.search(r'__version__\s*=\s*"([^"]+)"', version_content)
     if match:
@@ -187,30 +228,32 @@ def bump_version(version_type):
         return new_version
     return "unknown"
 
-def push_to_remote():
-    """推送到远程仓库（自动探测代理）"""
+def push_to_remote(new_version):
+    """推送到远程仓库（自动探测代理，只推送当前分支与本次发版 tag）"""
     print()
-    print_color("[5/5] 推送到远程仓库...", Color.YELLOW)
+    print_color("[7/7] 推送到远程仓库...", Color.YELLOW)
     print()
 
+    tag_name = f"v{new_version}"
     # 自动探测代理
     proxy = detect_proxy()
     if proxy:
         print_color(f"🔍 检测到可用代理: {proxy}", Color.CYAN)
-        push_cmd = f'git -c http.proxy={proxy} -c https.proxy={proxy} push'
-        push_tags_cmd = f'git -c http.proxy={proxy} -c https.proxy={proxy} push --tags'
+        proxy_args = f"-c http.proxy={proxy} -c https.proxy={proxy}"
+        push_cmd = f"git {proxy_args} push"
+        push_tag_cmd = f"git {proxy_args} push origin {tag_name}"
     else:
         print_color("ℹ️  未检测到代理，直接推送", Color.CYAN)
         push_cmd = "git push"
-        push_tags_cmd = "git push --tags"
+        push_tag_cmd = f"git push origin {tag_name}"
 
     # 推送代码
     print(f"→ {push_cmd}")
     run_cmd(push_cmd)
 
-    # 推送 tag
-    print(f"→ {push_tags_cmd}")
-    run_cmd(push_tags_cmd)
+    # 只推送本次发版的 tag（push --tags 会把本地所有陈旧 tag 一起推上去）
+    print(f"→ {push_tag_cmd}")
+    run_cmd(push_tag_cmd)
 
     print()
     print_color("✅ 推送完成", Color.GREEN)
@@ -234,11 +277,17 @@ def main():
 
     version_type = version_args[0]
 
+    # 锚定工作目录到项目根：.bumpversion.cfg 里的 version.py 相对路径、
+    # git status/add 与 changelog 生成中的 git 命令都按 cwd 解析，
+    # 锚定后无论从哪个目录启动（如 tools/）都能正确运行
+    os.chdir(ROOT_DIR)
+
     if dry_run:
         print_header("向僵尸开炮 · 发布预览（--dry-run，不修改文件）")
         # 预览模式：直接走简化流程，不需要检查 git 状态和 bump2version
         print_color("[1/3] 读取版本号...", Color.YELLOW)
         print()
+
         current_version = get_current_version()
         new_version_pre = calculate_new_version(current_version, version_type)
         print_color(f"📌 当前版本：v{current_version} → 新版本：v{new_version_pre}", Color.CYAN)
@@ -247,6 +296,7 @@ def main():
         # 在内存中生成 changelog 内容（不修改文件）
         print_color("[2/3] 在内存中生成 changelog 内容...", Color.YELLOW)
         print()
+
         last_tag = get_last_tag_changelog()
         commits = get_commits_since_tag(last_tag)
         print_color(f"📝 从 {last_tag} 到现在共 {len(commits)} 个 commit", Color.CYAN)
@@ -264,6 +314,7 @@ def main():
         # 模拟更新，不修改文件
         print_color("[3/3] 模拟更新 CHANGELOG 版本号...", Color.YELLOW)
         print()
+
         sim_ok, preview_content, sim_msg = simulate_changelog_update(
             new_version_pre,
             unreleased_content=changelog_content
@@ -283,7 +334,7 @@ def main():
             print()
             print_color("=" * 55, Color.CYAN)
             print_color("  ✅ 预览完成！以上内容不会写入文件", Color.CYAN)
-            print_color(f"  确认无误后运行：python release.py {version_type}", Color.CYAN)
+            print_color(f"  确认无误后运行：python tools/release.py {version_type}", Color.CYAN)
             print_color("=" * 55, Color.CYAN)
             print()
         else:
@@ -300,46 +351,20 @@ def main():
     # 2. 检查 bump2version
     check_bump2version()
 
+    # 2.5 校验 version.py 与 .bumpversion.cfg 版本号同步（双源不一致时 bump2version 必失败）
+    check_version_sync()
+
     # 3. 自动生成 changelog
     generate_changelog()
 
     # 3.5 手动更新 CHANGELOG 版本号（不依赖 bump2version，更可靠）
     print()
-    if dry_run:
-        print_color("[3.5/5] 预览模式：模拟更新 CHANGELOG 版本号...", Color.YELLOW)
-    else:
-        print_color("[3.5/5] 手动更新 CHANGELOG 版本号...", Color.YELLOW)
+    print_color("[5/7] 手动更新 CHANGELOG 版本号...", Color.YELLOW)
     print()
     # 读取当前版本号（从 changelog_utils）
     current_version = get_current_version()
     new_version_pre = calculate_new_version(current_version, version_type)
     print_color(f"📌 当前版本：v{current_version} → 新版本：v{new_version_pre}", Color.CYAN)
-
-    if dry_run:
-        # 预览模式：模拟更新，不修改文件
-        sim_ok, preview_content, sim_msg = simulate_changelog_update(new_version_pre)
-        if sim_ok:
-            print_color(f"✅ {sim_msg}", Color.GREEN)
-            print()
-            print_color("=" * 55, Color.CYAN)
-            print_color("  📋 预览：发版后的 CHANGELOG.md（前 60 行）", Color.CYAN)
-            print_color("=" * 55, Color.CYAN)
-            print()
-            lines = preview_content.split('\n')
-            for i, line in enumerate(lines[:60]):
-                print(line)
-            if len(lines) > 60:
-                print(f"... (共 {len(lines)} 行，已省略后 {len(lines)-60} 行)")
-            print()
-            print_color("=" * 55, Color.CYAN)
-            print_color("  ✅ 预览完成！以上内容不会写入文件", Color.CYAN)
-            print_color(f"  确认无误后运行：python release.py {version_type}", Color.CYAN)
-            print_color("=" * 55, Color.CYAN)
-            print()
-        else:
-            print_color(f"❌ {sim_msg}", Color.RED)
-            sys.exit(1)
-        return  # 预览模式结束，不执行后续步骤
 
     # 真实发版模式：手动更新 CHANGELOG 版本号
     changelog_ok, changelog_msg = update_changelog_version(new_version_pre)
@@ -349,14 +374,14 @@ def main():
         print_color(f"❌ {changelog_msg}，终止发版", Color.RED)
         sys.exit(1)
     # git add CHANGELOG.md，让 bump2version 的 commit 包含这个修改
-    run_cmd("git add CHANGELOG.md")
+    run_cmd(f"git add "{os.path.join(ROOT_DIR, 'CHANGELOG.md')}"")
     print_color("✅ CHANGELOG.md 已暂存", Color.GREEN)
 
     # 4. 升级版本号（bump2version 只修改 version.py，自动 commit 和打 tag）
     new_version = bump_version(version_type)
 
     # 5. 推送到远程
-    push_to_remote()
+    push_to_remote(new_version)
 
     # 完成
     print()
@@ -373,6 +398,7 @@ def main():
     print()
     print_color(f"查看发布：https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v{new_version}", Color.CYAN)
     print()
+
 
 if __name__ == "__main__":
     main()
