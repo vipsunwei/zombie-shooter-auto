@@ -1,56 +1,46 @@
-# Python
+# 调试图片
+_debug_*.png
+_current_*.png
+_test_*.png
+_temp_*.png
+_original_*.png
+_*.png
+
+# 调试脚本
+_debug_*.py
+_test_*.py
+_temp_*.py
+_add_*.py
+_modify_*.py
+_fix_*.py
+_update_*.py
+_draw_*.py
+_click_*.py
+_find_*.py
+_save_*.py
+
+# 截图缓存
+_screenshot_*.png
+_screen_*.png
+
+# Python缓存
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+*.pyc
+*.pyo
+*.pyd
 
 # 虚拟环境
-venv/
 .venv/
+venv/
 env/
-ENV/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-
-# 临时截图和测试文件
-*.png
-*.jpg
-*.jpeg
-*.bmp
-_check_*.png
-_current_screen.png
-_*.png
-
-# 日志文件
-*.log
 
 # 系统文件
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# 临时文件
-*.tmp
-*.temp
-*.bak
+.codebuddy
