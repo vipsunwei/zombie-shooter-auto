@@ -9,6 +9,18 @@
 
 （暂无变更）
 
+## [1.0.9] - 2026-09-06
+
+### 🔧 重构
+
+- 拆分 auto_play 为扁平多模块并修复审查崩溃 bug (43ea426)
+
+### 🐛 修复
+
+- 修复 release.py f-string 嵌套引号语法错误 (8a9cea7)
+- 修复巡逻车弹窗关闭点、优化战斗判定并同步文档 (1ea1337)
+- 修复check_bump2version误报未安装的问题，改用模块导入检查方式 (72238cb)
+
 ## [1.0.8] - 2026-09-05
 
 ### 🐛 修复
@@ -115,7 +127,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.8...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.9...HEAD
+[1.0.9]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.9
 [1.0.8]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.8
 [1.0.7]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.7
 [1.0.6]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.6
