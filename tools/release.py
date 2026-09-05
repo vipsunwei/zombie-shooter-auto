@@ -200,7 +200,7 @@ def generate_changelog():
     update_changelog_file(content)
     print_color("✅ CHANGELOG.md 已自动更新", Color.GREEN)
     # git add CHANGELOG.md，让 bump2version 提交时包含这个修改
-    run_cmd(f"git add "{os.path.join(ROOT_DIR, 'CHANGELOG.md')}"")
+    run_cmd(f'git add "{os.path.join(ROOT_DIR, "CHANGELOG.md")}"')
 
 
 def bump_version(version_type):
@@ -374,7 +374,7 @@ def main():
         print_color(f"❌ {changelog_msg}，终止发版", Color.RED)
         sys.exit(1)
     # git add CHANGELOG.md，让 bump2version 的 commit 包含这个修改
-    run_cmd(f"git add "{os.path.join(ROOT_DIR, 'CHANGELOG.md')}"")
+    run_cmd(f'git add "{os.path.join(ROOT_DIR, "CHANGELOG.md")}"')
     print_color("✅ CHANGELOG.md 已暂存", Color.GREEN)
 
     # 4. 升级版本号（bump2version 只修改 version.py，自动 commit 和打 tag）
