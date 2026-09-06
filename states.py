@@ -163,7 +163,7 @@ def is_chest_glowing(img, chest_name):
     """
     if img is None or chest_name not in CHEST_REGIONS:
         return False
-    x1, y1, x2, y2 = CHEST_REGIONS[chest_name]
+    x1, y1, x2, y2 = scale_region(CHEST_REGIONS[chest_name])
     # 只取上半部分（宝箱图标），裁掉底部文字行，排除金色文字干扰
     y2 = y1 + int((y2 - y1) * 0.55)
     if isinstance(img, Image.Image):
@@ -302,10 +302,11 @@ def is_auto_close_popup(img):
     """检测已激活技能弹窗（底部有"秒后自动关闭"文字），独立做 OCR 不依赖全局缓存"""
     if img is None:
         return False
+    ax1, ay1, ax2, ay2 = scale_region(AUTO_CLOSE_POPUP_REGION)
     if isinstance(img, Image.Image):
-        cropped = img.crop((360, 1735, 720, 1840))
+        cropped = img.crop((ax1, ay1, ax2, ay2))
     else:
-        cropped = img[1735:1840, 360:720, :]
+        cropped = img[ay1:ay2, ax1:ax2, :]
         cropped = Image.fromarray(cropped)
     cropped_np = np.array(cropped)
     ocr_reader = get_ocr_reader()

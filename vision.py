@@ -76,8 +76,7 @@ def ocr_battle_loop(img):
         img_pil = Image.fromarray(img)
 
     # ========== 第0级：波次检测（判断是否在战斗中） ==========
-    WAVE_X1, WAVE_X2 = 600, 1080
-    WAVE_Y1, WAVE_Y2 = 0, 120
+    WAVE_X1, WAVE_Y1, WAVE_X2, WAVE_Y2 = scale_region(BATTLE_WAVE_REGION)
     region_wave = img_pil.crop((WAVE_X1, WAVE_Y1, WAVE_X2, WAVE_Y2))
     result_wave = reader.readtext(np.array(region_wave))
     adjusted_wave = []
@@ -103,8 +102,8 @@ def ocr_battle_loop(img):
                     break
 
     # ========== 第一级：区域1（选择技能 + 词条名称） ==========
-    REGION1_Y1, REGION1_Y2 = 400, 750
-    region1 = img_pil.crop((0, REGION1_Y1, 1080, REGION1_Y2))
+    REGION1_X1, REGION1_Y1, REGION1_X2, REGION1_Y2 = scale_region(BATTLE_SKILL_REGION)
+    region1 = img_pil.crop((REGION1_X1, REGION1_Y1, REGION1_X2, REGION1_Y2))
     result1 = reader.readtext(np.array(region1))
     adjusted1 = []
     has_select_skill = False
@@ -125,8 +124,7 @@ def ocr_battle_loop(img):
         return result1
 
     # ========== 第二级：区域2（精英掉落） ==========
-    REGION2_X1, REGION2_X2 = 430, 650
-    REGION2_Y1, REGION2_Y2 = 1270, 1400
+    REGION2_X1, REGION2_Y1, REGION2_X2, REGION2_Y2 = scale_region(BATTLE_ELITE_REGION)
     region2 = img_pil.crop((REGION2_X1, REGION2_Y1, REGION2_X2, REGION2_Y2))
     result2 = reader.readtext(np.array(region2))
     adjusted2 = []
@@ -148,8 +146,7 @@ def ocr_battle_loop(img):
         return result2
 
     # ========== 第三级：小区域检测返回按钮（判断游戏是否结束） ==========
-    REGION_CHECK_X1, REGION_CHECK_X2 = 100, 980
-    REGION_CHECK_Y1, REGION_CHECK_Y2 = 1650, 1750
+    REGION_CHECK_X1, REGION_CHECK_Y1, REGION_CHECK_X2, REGION_CHECK_Y2 = scale_region(BATTLE_RETURN_CHECK_REGION)
     region_check = img_pil.crop((REGION_CHECK_X1, REGION_CHECK_Y1, REGION_CHECK_X2, REGION_CHECK_Y2))
     result_check = reader.readtext(np.array(region_check))
     adjusted_check = []
@@ -176,8 +173,8 @@ def ocr_battle_loop(img):
     print(f"    ⚡ 四级OCR[3/4] 检测到返回按钮，继续检测结算区域...")
 
     # ========== 第四级：区域3（通关结算） ==========
-    REGION3_Y1, REGION3_Y2 = 190, 1750
-    region3 = img_pil.crop((0, REGION3_Y1, 1080, REGION3_Y2))
+    REGION3_X1, REGION3_Y1, REGION3_X2, REGION3_Y2 = scale_region(BATTLE_SETTLE_REGION)
+    region3 = img_pil.crop((REGION3_X1, REGION3_Y1, REGION3_X2, REGION3_Y2))
     result3 = reader.readtext(np.array(region3))
     adjusted3 = []
     for item in result3:
@@ -265,7 +262,7 @@ def wave_white_ratio(img):
     """
     if img is None:
         return 0.0
-    x1, x2, y1, y2 = 770, 990, 10, 100
+    x1, y1, x2, y2 = scale_region(WAVE_WHITE_REGION)
     if isinstance(img, Image.Image):
         cropped = img.crop((x1, y1, x2, y2))
     else:
@@ -286,7 +283,7 @@ def is_wave_bright(img):
     """
     if img is None:
         return False
-    x1, x2, y1, y2 = 790, 950, 20, 100
+    x1, y1, x2, y2 = scale_region(WAVE_PIXEL_REGION)
     if isinstance(img, Image.Image):
         cropped = img.crop((x1, y1, x2, y2))
     else:
@@ -306,7 +303,7 @@ def get_wave_progress(img):
     """获取波次进度（如"7/20"），返回 (current, total)，识别失败返回 (None, None)"""
     if img is None:
         return None, None
-    x1, x2, y1, y2 = 790, 950, 20, 100
+    x1, y1, x2, y2 = scale_region(WAVE_PIXEL_REGION)
     if isinstance(img, Image.Image):
         cropped = img.crop((x1, y1, x2, y2))
     else:

@@ -74,15 +74,16 @@ def load_skill_config():
 
 
 def ocr_skill_region(img):
-    """对词条名称区域（y=610-760）进行裁剪并快速 OCR，结果存 config._skill_ocr_result"""
+    """对词条名称区域（SKILL_NAME_REGION，随分辨率缩放）裁剪并快速 OCR，结果存 config._skill_ocr_result"""
     if img is None:
         config._skill_ocr_result = None
         return None
     start_time = time.time()
+    sx1, sy1, sx2, sy2 = scale_region(SKILL_NAME_REGION)
     if isinstance(img, Image.Image):
-        cropped = img.crop((0, 610, 1080, 760))
+        cropped = img.crop((sx1, sy1, sx2, sy2))
     else:
-        cropped = img[610:760, :, :]
+        cropped = img[sy1:sy2, sx1:sx2, :]
         cropped = Image.fromarray(cropped)
     cropped_np = np.array(cropped)
     ocr_reader = vision.get_ocr_reader()
@@ -91,7 +92,7 @@ def ocr_skill_region(img):
     for item in result:
         if len(item) >= 3:
             bbox, text, confidence = item[0], item[1], item[2]
-            adjusted_bbox = [(p[0], p[1] + 610) for p in bbox]
+            adjusted_bbox = [(p[0] + sx1, p[1] + sy1) for p in bbox]
             adjusted_result.append((adjusted_bbox, text, confidence))
     config._skill_ocr_result = adjusted_result
     elapsed = time.time() - start_time
@@ -111,8 +112,13 @@ def get_skill_names_from_ocr(debug=False):
     middle_texts = []
     right_texts = []
 
+    # y 过滤带与卡片 x 分界均随分辨率缩放
+    _, band_y1, _, band_y2 = scale_region(SKILL_NAME_BAND)
+    div1 = scale((SKILL_CARD_DIVIDERS[0], 0))[0]
+    div2 = scale((SKILL_CARD_DIVIDERS[1], 0))[0]
+
     if debug:
-        print(f"    📊 词条名称区域（y=600-800）的OCR结果:")
+        print(f"    📊 词条名称区域（y={band_y1}-{band_y2}）的OCR结果:")
 
     for item in ocr_result:
         if len(item) < 3:
@@ -120,16 +126,16 @@ def get_skill_names_from_ocr(debug=False):
         bbox, text, confidence = item[0], item[1], item[2]
         center_x = sum(p[0] for p in bbox) / 4
         center_y = sum(p[1] for p in bbox) / 4
-        if center_y < 620 or center_y > 780:
+        if center_y < band_y1 or center_y > band_y2:
             continue
         text_len = len(text.strip())
         if text_len > 20 or text_len < 2:
             continue
         if debug:
             print(f"       [{text}]({int(center_x)},{int(center_y)}) conf={confidence:.2f}")
-        if center_x < 360:
+        if center_x < div1:
             left_texts.append((text, confidence))
-        elif center_x < 720:
+        elif center_x < div2:
             middle_texts.append((text, confidence))
         else:
             right_texts.append((text, confidence))

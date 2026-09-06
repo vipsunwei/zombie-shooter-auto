@@ -100,6 +100,21 @@ CHEST_CLICK_POSITIONS = {
 }
 
 # ============================================================
+#  检测区域配置（基准 1080×1920，使用处经 scale_region 自动缩放）
+# ============================================================
+BATTLE_WAVE_REGION = (600, 0, 1080, 120)             # 战斗第0级：波次标题 OCR 区
+BATTLE_SKILL_REGION = (0, 400, 1080, 750)            # 战斗第1级：选择技能+词条区
+BATTLE_ELITE_REGION = (430, 1270, 650, 1400)         # 战斗第2级：精英掉落区
+BATTLE_RETURN_CHECK_REGION = (100, 1650, 980, 1750)  # 战斗第3级：返回按钮检测区
+BATTLE_SETTLE_REGION = (0, 190, 1080, 1750)          # 战斗第4级：通关结算区
+WAVE_WHITE_REGION = (770, 10, 990, 100)              # 波次白色像素统计区（wave_white_ratio）
+WAVE_PIXEL_REGION = (790, 20, 950, 100)              # 波次亮白/进度识别区
+SKILL_NAME_REGION = (0, 610, 1080, 760)              # 技能词条名称裁剪 OCR 区
+SKILL_NAME_BAND = (0, 620, 1080, 780)                # 词条中心 y 过滤带
+SKILL_CARD_DIVIDERS = (360, 720)                     # 左/中/右技能卡 x 分界
+AUTO_CLOSE_POPUP_REGION = (360, 1735, 720, 1840)     # 已激活技能弹窗「秒后自动关闭」区
+
+# ============================================================
 #  运行时可变状态（必须经由 config.xxx 读写）
 # ============================================================
 screen_w, screen_h = 1080, 1920   # 实际分辨率（main 连接后填充）
@@ -170,6 +185,17 @@ __all__ = [
     "SELECTED_BRIGHTNESS_THRESHOLD",
     "CHEST_REGIONS",
     "CHEST_CLICK_POSITIONS",
+    "BATTLE_WAVE_REGION",
+    "BATTLE_SKILL_REGION",
+    "BATTLE_ELITE_REGION",
+    "BATTLE_RETURN_CHECK_REGION",
+    "BATTLE_SETTLE_REGION",
+    "WAVE_WHITE_REGION",
+    "WAVE_PIXEL_REGION",
+    "SKILL_NAME_REGION",
+    "SKILL_NAME_BAND",
+    "SKILL_CARD_DIVIDERS",
+    "AUTO_CLOSE_POPUP_REGION",
     "PATROL_CAR_BTN",
     "QUICK_PATROL_BTN_REGION",
     "PATROL_CLAIM_REGION",
