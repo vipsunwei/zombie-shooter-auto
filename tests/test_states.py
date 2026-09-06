@@ -33,8 +33,8 @@ def test_is_chest_glowing_unknown_name():
 
 
 def test_get_glowing_chests():
-    # 三个宝箱检测区在 CHEST_REGIONS 中相互重叠（成功通关区包住另两个），
-    # 因此逐个构造纯黑图、仅把对应宝箱区涂成金色，验证各自能被正确识别为发光
+    # 三个宝箱检测区水平排列互不重叠，
+    # 逐个构造纯黑图、仅把对应宝箱区涂成金色，验证各自能被正确识别为发光
     for name in ["成功通关", "50%血量通关", "完美通关"]:
         img = Image.new("RGB", (1080, 1920), (0, 0, 0))
         arr = np.array(img)
