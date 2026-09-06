@@ -29,6 +29,7 @@ import popups
 import skills
 import rewards
 import patrol
+import menu
 
 
 # ============================================================
@@ -55,7 +56,8 @@ def parse_args():
       --emulator, -e <类型>      模拟器：mumu / leidian(或 ld) / auto（自动检测）
       --mode, -m <模式>          运行模式：battle（默认，循环闯关）/ patrol（快速巡逻）
       --min-stamina, -s <数量>   鸡腿(体力)低于此值即停止脚本（默认 50）
-    无 --emulator 时弹出交互式选择菜单。
+    无 --emulator 时弹出模拟器选择菜单；无 --mode 时弹出模式选择菜单；
+    无 --min-stamina 时提示输入鸡腿停止阈值（默认 50）。任一项已通过命令行指定则跳过对应菜单。
     """
     args = sys.argv[1:]
     if "--help" in args or "-h" in args:
@@ -79,7 +81,7 @@ def parse_args():
   <数量>       自定义鸡腿不足停止线，例如 -s 80 表示剩 80 鸡腿即停（默认 50）
 
 示例:
-  python auto_play.py                            # 弹出选择菜单（上下箭头选择模拟器）
+  python auto_play.py                            # 依次弹出：模拟器 / 模式 / 鸡腿停止阈值 菜单
   python auto_play.py --emulator mumu            # 指定 MuMu
   python auto_play.py --emulator leidian         # 指定雷电
   python auto_play.py --emulator auto            # 自动检测
@@ -94,20 +96,25 @@ def parse_args():
         sys.exit(0)
 
     mode = "battle"
+    mode_provided = False
     emulator = None
+    stamina_provided = False
     i = 0
     while i < len(args):
         arg = args[i]
         if arg.startswith("--mode="):
             mode = _validate_mode(arg.split("=", 1)[1])
+            mode_provided = True
         elif arg in ("-m", "--mode"):
             if i + 1 >= len(args):
                 print("❌ --mode/-m 缺少参数")
                 sys.exit(1)
             mode = _validate_mode(args[i + 1])
+            mode_provided = True
             i += 1
         elif arg.startswith("-m="):
             mode = _validate_mode(arg.split("=", 1)[1])
+            mode_provided = True
         elif arg.startswith("--emulator="):
             emulator = _normalize_emulator(arg.split("=", 1)[1])
         elif arg in ("-e", "--emulator"):
@@ -120,25 +127,32 @@ def parse_args():
             emulator = _normalize_emulator(arg.split("=", 1)[1])
         elif arg.startswith("--min-stamina="):
             config.STOP_STAMINA_THRESHOLD = _validate_stamina(arg.split("=", 1)[1])
+            stamina_provided = True
         elif arg in ("-s", "--min-stamina"):
             if i + 1 >= len(args):
                 print("❌ --min-stamina/-s 缺少参数")
                 sys.exit(1)
             config.STOP_STAMINA_THRESHOLD = _validate_stamina(args[i + 1])
+            stamina_provided = True
             i += 1
         elif arg.startswith("-s="):
             config.STOP_STAMINA_THRESHOLD = _validate_stamina(arg.split("=", 1)[1])
+            stamina_provided = True
         elif arg.startswith("-"):
-            print(f"❌ 未知参数: {arg}（仅支持 --emulator/-e / --mode/-m）")
+            print(f"❌ 未知参数: {arg}（仅支持 --emulator/-e / --mode/-m / --min-stamina/-s）")
             sys.exit(1)
         else:
-            print(f"❌ 不支持位置参数: {arg}（请使用 --emulator/-e / --mode/-m）")
+            print(f"❌ 不支持位置参数: {arg}（请使用 --emulator/-e / --mode/-m / --min-stamina/-s）")
             sys.exit(1)
         i += 1
 
     config.MODE = mode
     if emulator is None:
-        return select_emulator_interactive()
+        emulator = menu.select_emulator_interactive()
+    if not mode_provided:
+        config.MODE = menu.select_mode_interactive()
+    if not stamina_provided:
+        config.STOP_STAMINA_THRESHOLD = menu.prompt_stamina_interactive()
     return emulator
 
 
@@ -164,53 +178,7 @@ def _validate_stamina(value):
     return n
 
 
-def enable_ansi_escape():
-    """启用 Windows 控制台 ANSI 转义码支持"""
-    try:
-        import ctypes
-        kernel32 = ctypes.windll.kernel32
-        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
-        return True
-    except Exception:
-        return False
 
-
-def select_emulator_interactive():
-    """交互式选择模拟器（上下箭头选择，回车确认）"""
-    import msvcrt
-    enable_ansi_escape()
-    options = [
-        ("mumu", "MuMu 模拟器（默认推荐）"),
-        ("ldplayer", "雷电模拟器"),
-        ("auto", "自动检测"),
-    ]
-    selected = 0
-    print("\n" + "=" * 45)
-    print("  请选择模拟器（上下箭头选择，回车确认）")
-    print("=" * 45)
-    menu_start_line = 4
-    while True:
-        for i, (key, display) in enumerate(options):
-            if i == selected:
-                print(f"  ▶ {display}")
-            else:
-                print(f"    {display}")
-        print("=" * 45)
-        key = msvcrt.getch()
-        if key == b'\xe0':
-            key = msvcrt.getch()
-            if key == b'H':
-                selected = (selected - 1) % len(options)
-            elif key == b'P':
-                selected = (selected + 1) % len(options)
-        elif key == b'\r':
-            emulator_type = options[selected][0]
-            print(f"\n✅ 已选择: {options[selected][1]}")
-            return emulator_type
-        elif key == b'\x03':
-            print("\n\n已取消选择")
-            sys.exit(0)
-        print(f"\033[{len(options) + 1}A", end="", flush=True)
 
 
 # ============================================================
