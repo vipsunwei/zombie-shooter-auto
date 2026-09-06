@@ -115,10 +115,10 @@ def main():
                 # 加载完成后必须复位 just_started，否则跳出保护会被永久屏蔽
                 if ctx.just_started and time.time() - ctx.just_start_time >= 3:
                     ctx.just_started = False
-                if not ctx.just_started and config._wave_miss_count >= 3:
-                    miss_cnt = config._wave_miss_count
+                if not ctx.just_started and config.get_wave_miss_count() >= 3:
+                    miss_cnt = config.get_wave_miss_count()
                     config.in_battle_loop = False
-                    config._wave_miss_count = 0
+                    config.reset_wave_miss_count()
                     _log(f"🔄 连续{miss_cnt}次未检测到波次，自动跳出游戏循环")
                     continue
                 result = _dispatch(BATTLE_HANDLERS, ctx, img)

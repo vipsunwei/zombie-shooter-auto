@@ -118,7 +118,7 @@ def ocr_battle_loop(img):
     if has_select_skill:
         result1 = adjusted1
         set_current_ocr_result(result1)
-        config._wave_miss_count = 0
+        config.reset_wave_miss_count()
         elapsed = time.time() - start_time
         print(f"    ⚡ 四级OCR[1/4] 选择技能: {elapsed:.1f}s")
         return result1
@@ -140,7 +140,7 @@ def ocr_battle_loop(img):
     if has_elite_drop:
         result2 = adjusted2
         set_current_ocr_result(result2)
-        config._wave_miss_count = 0
+        config.reset_wave_miss_count()
         elapsed = time.time() - start_time
         print(f"    ⚡ 四级OCR[2/4] 精英掉落: {elapsed:.1f}s")
         return result2
@@ -161,15 +161,15 @@ def ocr_battle_loop(img):
 
     if not has_return_btn:
         if has_wave:
-            config._wave_miss_count = 0
+            config.reset_wave_miss_count()
         else:
-            config._wave_miss_count += 1
+            config.set_wave_miss_count(config.get_wave_miss_count() + 1)
         set_current_ocr_result([])
         elapsed = time.time() - start_time
-        print(f"    ⚡ 三级OCR[3/3] 战斗中: {elapsed:.1f}s（波次计数:{config._wave_miss_count}）")
+        print(f"    ⚡ 三级OCR[3/3] 战斗中: {elapsed:.1f}s（波次计数:{config.get_wave_miss_count()}）")
         return []
 
-    config._wave_miss_count = 0
+    config.reset_wave_miss_count()
     print(f"    ⚡ 四级OCR[3/4] 检测到返回按钮，继续检测结算区域...")
 
     # ========== 第四级：区域3（通关结算） ==========

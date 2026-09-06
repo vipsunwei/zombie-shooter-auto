@@ -120,7 +120,7 @@ AUTO_CLOSE_POPUP_REGION = (360, 1735, 720, 1840)     # 已激活技能弹窗「�
 screen_w, screen_h = 1080, 1920   # 实际分辨率（main 连接后填充）
 MODE = "battle"                    # 运行模式：battle（循环闯关，默认）/ patrol（快速巡逻）
 in_battle_loop = False            # 状态机开关
-_wave_miss_count = 0              # 连续未检测到波次的计数
+_wave_miss_count = 0              # 连续未检测到波次的计数（须经下方 get/set/reset 访问器读写）
 _ocr_reader = None                # OCR 阅读器（懒加载，只初始化一次）
 _current_ocr_result = None        # 当前循环 OCR 结果缓存（多个检测函数共享）
 _skill_ocr_result = None          # 词条名称区域裁剪后的 OCR 结果（加速用）
@@ -148,6 +148,23 @@ def scale_region(region):
     x1, y1, x2, y2 = region
     return (int(x1 * screen_w / 1080), int(y1 * screen_h / 1920),
             int(x2 * screen_w / 1080), int(y2 * screen_h / 1920))
+
+
+def get_wave_miss_count():
+    """连续未检测到波次的计数（读取）"""
+    return _wave_miss_count
+
+
+def set_wave_miss_count(value):
+    """连续未检测到波次的计数（写入）"""
+    global _wave_miss_count
+    _wave_miss_count = value
+
+
+def reset_wave_miss_count():
+    """连续未检测到波次的计数（清零）"""
+    global _wave_miss_count
+    _wave_miss_count = 0
 
 
 # ============================================================
@@ -204,4 +221,7 @@ __all__ = [
     "STAMINA_PER_PATROL",
     "STOP_STAMINA_THRESHOLD",
     "BAG_FULL_EXIT",
+    "get_wave_miss_count",
+    "set_wave_miss_count",
+    "reset_wave_miss_count",
 ]
