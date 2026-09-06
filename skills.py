@@ -58,6 +58,9 @@ def load_skill_config():
         if hasattr(module, "strategy"):
             config.SKILL_STRATEGY = module.strategy
         config.SKILL_PRIORITIES = getattr(module, "priorities", {})
+        config.SKILL_REQUIRES = getattr(module, "SKILL_REQUIRES", {})
+        config.SKILL_PICK_DECAY = getattr(module, "PICK_DECAY", 0.5)
+        config.SKILL_REQUIRE_DECAY = getattr(module, "REQUIRE_DECAY", 0.3)
         config._skill_config = module
         config._skill_config_mtime = current_mtime
         config._skill_config_exists = True
@@ -222,22 +225,44 @@ def get_skill_names_from_ocr(debug=False):
 
 
 def get_skill_priority(skill_name):
-    """获取词条的优先级分数（支持部分匹配），未配置返回 None"""
+    """获取词条的动态优先级分数（基础分 × 已点降权 × 前置依赖降权），未配置返回 None"""
     if not skill_name:
         return None
+    base = None
+    matched_key = None
     if skill_name in config.SKILL_PRIORITIES:
-        return config.SKILL_PRIORITIES[skill_name]
-    best_priority = None
-    for keyword, priority in config.SKILL_PRIORITIES.items():
-        if keyword in skill_name:
-            if best_priority is None or priority > best_priority:
-                best_priority = priority
-    return best_priority
+        base = config.SKILL_PRIORITIES[skill_name]
+        matched_key = skill_name
+    else:
+        for keyword, priority in config.SKILL_PRIORITIES.items():
+            if keyword in skill_name:
+                if base is None or priority > base:
+                    base = priority
+                    matched_key = keyword
+    if base is None:
+        return None
+    score = float(base)
+    # 已点降权：本局已点过该词条，次数越多分数越低
+    picked = config.SKILL_PICKED.get(skill_name, 0)
+    if picked > 0:
+        score *= (config.SKILL_PICK_DECAY ** picked)
+    # 前置依赖降权：依赖的核心词条本局尚未点过时，增伤类词条降权
+    req = config.SKILL_REQUIRES.get(matched_key) or config.SKILL_REQUIRES.get(skill_name)
+    if req:
+        req_met = any(req == k or req in k or k in req for k in config.SKILL_PICKED)
+        if not req_met:
+            score *= config.SKILL_REQUIRE_DECAY
+    return score
 
 
 def do_select_skill():
     """按策略选技能卡片，返回 (pos_name, pos_coord, left, middle, right, reason[, selected, score])"""
     load_skill_config()
+
+    # 跨关清空本局已点历史：in_battle_loop 由 False 变 True 视为新一关开始
+    if config.in_battle_loop and not config._skill_picked_loop:
+        config.SKILL_PICKED = {}
+    config._skill_picked_loop = config.in_battle_loop
 
     if config.SKILL_STRATEGY != "priority":
         if config.SKILL_STRATEGY == "left":
@@ -306,6 +331,7 @@ def do_select_skill():
         top_candidates = [c for c in configured if c[3] == max_score]
         best = random.choice(top_candidates)
         device.tap(best[1])
+        config.SKILL_PICKED[best[2]] = config.SKILL_PICKED.get(best[2], 0) + 1
         if len(top_candidates) > 1:
             reason = f"优先级最高({best[3]}分，{len(top_candidates)}个同分随机)，词条[{best[2]}]"
         else:

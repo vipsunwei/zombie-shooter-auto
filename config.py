@@ -21,7 +21,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EMULATOR_TYPE = "mumu"      # 运行时由 main 根据命令行参数覆盖
 ADB_PATH = ""               # 运行时由 init_adb 填充
 DEVICE = ""                 # 运行时由 init_adb 填充
-SKILL_STRATEGY = "middle"   # 运行时可能被 load_skill_config 覆盖
+SKILL_STRATEGY = "random"   # 运行时可能被 load_skill_config 覆盖
 BATTLE_LOOP_INTERVAL = 3.0  # 游戏循环中每次检测间隔（秒）
 CHECK_INTERVAL = 0.8        # 非游戏循环中每次检测间隔（秒）
 CLEAN_SCREENSHOT_PER_LEVEL = True  # 每关通关后清理截图
@@ -112,6 +112,11 @@ _skill_config = None              # 加载后的 skill_config 模块对象
 _skill_config_mtime = None        # 配置文件最后修改时间（缓存判断）
 _skill_config_exists = None       # 配置文件是否存在（缓存）
 SKILL_PRIORITIES = {}             # 词条优先级配置（load_skill_config 填充）
+SKILL_PICKED = {}                 # 本局已点词条计数（动态降权用）
+SKILL_REQUIRES = {}               # 词条前置依赖（key 依赖 value 先点过）
+SKILL_PICK_DECAY = 0.5           # 已点降权系数（第 n 次分数 *= DECAY**n）
+SKILL_REQUIRE_DECAY = 0.3        # 前置依赖未满足时的降权系数
+_skill_picked_loop = False        # 内部：上一次 in_battle_loop 状态（用于跨关清空历史）
 
 # ============================================================
 #  坐标缩放工具（无副作用，供所有模块调用，避免 device<->vision 循环依赖）

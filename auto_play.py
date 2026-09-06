@@ -290,13 +290,7 @@ def main():
             text_count = len(ocr_result) if ocr_result else 0
             print(f"[{time.strftime('%H:%M:%S')}] 📸 截图{screenshot_time:.1f}s + 🔍 OCR{ocr_time:.1f}s({text_count}字)")
 
-            # 体力(鸡腿)不足：回到战斗-关卡选择并停止脚本
-            stamina = states.get_stamina(img)
-            if stamina is not None and stamina < config.STOP_STAMINA_THRESHOLD:
-                print(f"[{time.strftime('%H:%M:%S')}] 🍗 体力(鸡腿) {stamina} 不足 {config.STOP_STAMINA_THRESHOLD}，停止循环闯关")
-                device.click_bottom_nav("战斗")
-                time.sleep(1.5)
-                sys.exit(config.OUT_OF_STAMINA_EXIT)
+            # 注：鸡腿(体力)不足判断已移至下方 关卡选择(is_level_select) 分支、点开始游戏之前
 
             status = "战斗中"
 
@@ -307,6 +301,10 @@ def main():
                     print(f"[{time.strftime('%H:%M:%S')}] 🔄 检测到游戏循环界面，自动切换到游戏循环中")
 
             if config.in_battle_loop:
+                # 战斗加载阶段(just_started 起 3 秒内)豁免"未检测波次跳出"；
+                # 加载完成后必须复位 just_started，否则跳出保护会被永久屏蔽
+                if just_started and time.time() - just_start_time >= 3:
+                    just_started = False
                 if not just_started and config._wave_miss_count >= 3:
                     status = "已离开游戏界面"
                     miss_cnt = config._wave_miss_count
@@ -481,21 +479,58 @@ def main():
                         time.sleep(1)
                         unknown_cnt = 0
                         continue
+                    # 点开始游戏前：先确认"开始游戏"按钮确实在界面上、能定位到
+                    start_pos = vision.get_text_position(
+                        "开始游戏", region=(300, 1480, 780, 1680), min_confidence=0.1)
+                    if start_pos is None:
+                        print(f"    ⚠ 未定位到「开始游戏」按钮（可能并非关卡选择界面或OCR未识别），本轮回退重试")
+                        unknown_cnt = 0
+                        continue
+                    # 点开始游戏前判断鸡腿是否足够开下一关；不足则停止脚本（游戏循环中不判断）
+                    stamina = states.get_stamina(img)
+                    if stamina is not None and stamina < config.STOP_STAMINA_THRESHOLD:
+                        print(f"[{time.strftime('%H:%M:%S')}] 🍗 体力(鸡腿) {stamina} 不足 {config.STOP_STAMINA_THRESHOLD}，停止循环闯关")
+                        device.click_bottom_nav("战斗")
+                        time.sleep(1.5)
+                        sys.exit(config.OUT_OF_STAMINA_EXIT)
                     config.in_battle_loop = True
-                    print(f"[{time.strftime('%H:%M:%S')}] ▶ 关卡选择 → 当前关卡未完美通关，点开始游戏(540,1594)，进入游戏循环")
-                    device.tap(START_BTN)
+                    print(f"[{time.strftime('%H:%M:%S')}] ▶ 关卡选择 → 点开始游戏{start_pos}，进入游戏循环")
+                    device.tap(start_pos)
                     just_started = True
                     just_start_time = time.time()
-                    print(f"    → 进入战斗加载阶段，3秒内不触发未知界面兜底")
-                    time.sleep(3)
-                    print(f"    → 检查是否有已激活技能倒计时弹窗...")
-                    img_check = device.screenshot()
-                    if img_check is not None:
-                        if states.is_auto_close_popup(img_check):
+                    print(f"    → 验证是否真正进入战斗界面（最多6秒）...")
+                    entered_battle = False
+                    for _ in range(12):  # 12 × 0.5s = 6s
+                        time.sleep(0.5)
+                        img_v = device.screenshot()
+                        if img_v is None:
+                            continue
+                        vision.ocr_screenshot(img_v)  # 刷新OCR缓存，使文本判据基于当前帧
+                        if states.is_battling(img_v):
+                            entered_battle = True
+                            break
+                        if states.is_level_select(img_v) or states.is_level_list(img_v):
+                            # 仍停在关卡选择页：点击未生效，重新点开始游戏并刷新加载计时
+                            start_pos = vision.get_text_position(
+                                "开始游戏", region=(300, 1480, 780, 1680), min_confidence=0.1)
+                            if start_pos is None:
+                                start_pos = START_BTN  # OCR未定位到则回退固定坐标
+                            print(f"    → 仍在关卡选择页，重新点击开始游戏{start_pos}")
+                            device.tap(start_pos)
+                            just_started = True
+                            just_start_time = time.time()
+                            continue
+                        if states.is_auto_close_popup(img_v):
                             print(f"    → 检测到已激活技能弹窗，点击左下角关闭")
                             popups.close_auto_close_popup()
-                        else:
-                            print(f"    → 未检测到已激活技能弹窗，继续游戏")
+                            continue
+                        # 其余视为战斗加载/过渡画面，继续等待
+                    if entered_battle:
+                        print(f"    ✅ 已确认进入战斗界面")
+                    else:
+                        print(f"    ⚠ 未在限定时间内确认进入战斗，回退到关卡选择重试")
+                        config.in_battle_loop = False
+                        just_started = False
                     unknown_cnt = 0
                 elif states.is_victory(img):
                     status = "通关"

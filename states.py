@@ -129,21 +129,34 @@ def is_claimable_chest(chest_name):
 
 
 def is_chest_glowing(img, chest_name):
-    """检测指定宝箱是否发光（未领取）：通过宝箱区域的金黄色像素比例判断"""
+    """检测指定宝箱是否发光（未领取）
+
+    判定依据：宝箱图标的金黄色像素 + 明显高亮光晕。
+    关键修复：检测区域只取宝箱图标部分（裁掉底部文字行），避免把
+    「50%血量通关」等挑战标签的金色文字误判为发光宝箱；且要求存在
+    高亮光晕（发光宝箱比普通金文字亮得多），进一步排除文字干扰。
+    """
     if img is None or chest_name not in CHEST_REGIONS:
         return False
     x1, y1, x2, y2 = CHEST_REGIONS[chest_name]
+    # 只取上半部分（宝箱图标），裁掉底部文字行，排除金色文字干扰
+    y2 = y1 + int((y2 - y1) * 0.55)
     if isinstance(img, Image.Image):
         cropped = img.crop((x1, y1, x2, y2))
     else:
         cropped = img[y1:y2, x1:x2, :]
         cropped = Image.fromarray(cropped)
     img_np = np.array(cropped)
+    # 金色图标像素
     gold_mask = (img_np[:, :, 0] > 180) & (img_np[:, :, 1] > 130) & (img_np[:, :, 2] < 100)
-    gold_count = np.sum(gold_mask)
+    # 高亮光晕（发光宝箱比普通金文字更亮）
+    glow_mask = (img_np[:, :, 0] > 225) & (img_np[:, :, 1] > 195) & (img_np[:, :, 2] < 85)
     total = img_np.shape[0] * img_np.shape[1]
-    ratio = gold_count / total * 100
-    return bool(ratio > 15)
+    gold_ratio = np.sum(gold_mask) / total * 100
+    glow_ratio = np.sum(glow_mask) / total * 100
+    # 必须既有金色图标、又有明显高亮光晕，才判定为发光
+    # 实测未发光宝箱 glow_ratio 最高仅 1.15%，阈值取 2 留余量且不会漏领
+    return bool(gold_ratio > 15 and glow_ratio > 2)
 
 
 def get_glowing_chests(img):
