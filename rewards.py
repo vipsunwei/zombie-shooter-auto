@@ -93,7 +93,7 @@ def claim_all_chests(img):
         img_reward = device.screenshot()
         if img_reward is not None and states.is_reward_popup(img_reward):
             print(f"    → 检测到奖励展示界面，点击关闭（第{wait_idx + 1}次）")
-            popups.close_with_verify(REWARD_POPUP_CLOSE_BTN, states.is_reward_popup, "奖励展示")
+            device.close_with_verify(REWARD_POPUP_CLOSE_BTN, states.is_reward_popup, "奖励展示")
             break
         time.sleep(0.5)
     else:
