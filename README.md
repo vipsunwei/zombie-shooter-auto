@@ -65,4 +65,7 @@ python auto_play.py --help
 - 缺依赖报错 → `pip install -r requirements.txt`
 - 连不上模拟器 → 确认分辨率 1080×1920；MuMu 端口 16384 / 雷电 5555
 
+## 更新日志
+版本变更记录见 [CHANGELOG.md](./CHANGELOG.md)。
+
 MIT License · 发版与单元测试见 [MAINTAINER.md](./MAINTAINER.md)
