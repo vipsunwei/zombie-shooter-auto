@@ -9,6 +9,25 @@
 
 （暂无变更）
 
+## [2.0.0] - 2026-09-06
+
+### ✨ 新增
+
+- 新增启动交互菜单并拆分 menu 模块，补充运行文档 (4ca2714)
+- 新增快速巡逻模式（自动巡逻/满12h领取/背包满停止/自定义鸡腿阈值/奖励弹窗校验式重试关闭） (552d604)
+
+### 🔧 重构
+
+- 主循环改为表驱动分派并拆分 cli/handlers 模块 (c45847a)
+
+### ⚡ 优化
+
+- 优化词条优先级配置文件及优先级算法逻辑 (1e1dad5)
+
+### 📝 文档
+
+- README 补充更新日志链接 (752fecf)
+
 ## [1.0.9] - 2026-09-06
 
 ### 🔧 重构
@@ -127,7 +146,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v1.0.9...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.0
 [1.0.9]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.9
 [1.0.8]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.8
 [1.0.7]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.7
