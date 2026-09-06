@@ -125,7 +125,7 @@ def _on_elite_drop(ctx, img):
 
 def _on_battle_default(ctx, img):
     """战斗中兜底：未命中任何已知界面时，检测「返回」按钮进入结算处理"""
-    back_pos = vision.find_text("返回", min_confidence=0.5)
+    back_pos = vision.get_text_position("返回", region=VICTORY_RETURN_REGION, min_confidence=0.5)
     if not back_pos:
         ctx.unknown_cnt = 0
         return "战斗中"
