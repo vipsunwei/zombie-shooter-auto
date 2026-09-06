@@ -323,26 +323,3 @@ def get_wave_progress(img):
                 if match:
                     return int(match.group(1)), int(match.group(2))
     return None, None
-
-
-def is_in_game_interface(img):
-    """判断是否还在游戏界面（右上角是否有"波次"文字）。
-    自己独立做小区域 OCR，不依赖全局 OCR 结果。
-    """
-    if img is None:
-        return False
-    x1, x2, y1, y2 = 790, 950, 20, 100
-    if isinstance(img, Image.Image):
-        cropped = img.crop((x1, y1, x2, y2))
-    else:
-        cropped = img[y1:y2, x1:x2, :]
-        cropped = Image.fromarray(cropped)
-    cropped_np = np.array(cropped)
-    ocr_reader = get_ocr_reader()
-    result = ocr_reader.readtext(cropped_np, detail=1)
-    for item in result:
-        if len(item) >= 3:
-            bbox, text, confidence = item[0], item[1], item[2]
-            if confidence >= 0.3 and "波次" in text:
-                return True
-    return False

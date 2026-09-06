@@ -25,17 +25,17 @@ import states
 def _get_pixel_brightness(cx, cy, radius=8):
     """获取指定位置最亮像素的亮度值（R+G+B）"""
     try:
-        img = Image.open(SCREENSHOT_LOCAL)
-        max_bright = 0
-        for dx in range(-radius, radius + 1):
-            for dy in range(-radius, radius + 1):
-                px, py = cx + dx, cy + dy
-                if 0 <= px < img.width and 0 <= py < img.height:
-                    p = img.getpixel((px, py))
-                    bright = p[0] + p[1] + p[2]
-                    if bright > max_bright:
-                        max_bright = bright
-        return max_bright
+        with Image.open(SCREENSHOT_LOCAL) as img:
+            max_bright = 0
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    px, py = cx + dx, cy + dy
+                    if 0 <= px < img.width and 0 <= py < img.height:
+                        p = img.getpixel((px, py))
+                        bright = p[0] + p[1] + p[2]
+                        if bright > max_bright:
+                            max_bright = bright
+            return max_bright
     except Exception:
         return 0
 
@@ -153,14 +153,13 @@ def detect_mumu_adb():
         if install_path:
             adb_path = os.path.join(install_path, "nx_main", "adb.exe")
             if os.path.exists(adb_path):
-                for port in [16384, 7555, 16385]:
-                    return (adb_path, f"127.0.0.1:{port}")
+                # 默认端口 16384；旧版可能用 7555/16385，连不上时用 -e 手动指定
+                return (adb_path, "127.0.0.1:16384")
     adb_files = find_files_by_name("adb.exe", max_depth=4)
     for adb_path in adb_files:
         path_lower = adb_path.lower()
         if "mumu" in path_lower or "netease" in path_lower:
-            for port in [16384, 7555, 16385]:
-                return (adb_path, f"127.0.0.1:{port}")
+            return (adb_path, "127.0.0.1:16384")
     return (None, None)
 
 
@@ -179,14 +178,13 @@ def detect_ldplayer_adb():
         if install_path:
             adb_path = os.path.join(install_path, "adb.exe")
             if os.path.exists(adb_path):
-                for port in [5554, 5555, 5556, 5557, 5558]:
-                    return (adb_path, f"127.0.0.1:{port}")
+                # 默认端口 5554；其他实例可能用 5555~5558，连不上时用 -e 手动指定
+                return (adb_path, "127.0.0.1:5554")
     adb_files = find_files_by_name("adb.exe", max_depth=3)
     for adb_path in adb_files:
         path_lower = adb_path.lower()
         if "leidian" in path_lower or "ldplayer" in path_lower:
-            for port in [5554, 5555, 5556, 5557, 5558]:
-                return (adb_path, f"127.0.0.1:{port}")
+            return (adb_path, "127.0.0.1:5554")
     return (None, None)
 
 
