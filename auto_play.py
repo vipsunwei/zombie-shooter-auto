@@ -28,6 +28,7 @@ import states
 import popups
 import skills
 import rewards
+import patrol
 
 
 # ============================================================
@@ -48,7 +49,14 @@ def _normalize_emulator(emulator):
 
 
 def parse_args():
-    """解析命令行参数，返回模拟器类型字符串（内部统一用 mumu / ldplayer）"""
+    """解析命令行参数，返回模拟器类型字符串（内部统一用 mumu / ldplayer）。
+
+    参数统一为显式 --option 风格，并支持单字母短选项：
+      --emulator, -e <类型>      模拟器：mumu / leidian(或 ld) / auto（自动检测）
+      --mode, -m <模式>          运行模式：battle（默认，循环闯关）/ patrol（快速巡逻）
+      --min-stamina, -s <数量>   鸡腿(体力)低于此值即停止脚本（默认 50）
+    无 --emulator 时弹出交互式选择菜单。
+    """
     args = sys.argv[1:]
     if "--help" in args or "-h" in args:
         print("""
@@ -56,33 +64,104 @@ def parse_args():
 ==========================
 
 用法:
-  python auto_play.py [模拟器类型]
+  python auto_play.py [--emulator|-e <类型>] [--mode|-m <模式>] [--min-stamina|-s <数量>]
 
-模拟器类型:
-  mumu        MuMu模拟器（默认）
-  leidian     雷电模拟器（简写: ld）
-  auto        自动检测
+模拟器类型 (--emulator, -e):
+  mumu         MuMu模拟器（默认）
+  leidian      雷电模拟器（简写: ld）
+  auto         自动检测
+
+运行模式 (--mode, -m):
+  battle       循环闯关（默认）
+  patrol       快速巡逻
+
+鸡腿停止阈值 (--min-stamina, -s):
+  <数量>       自定义鸡腿不足停止线，例如 -s 80 表示剩 80 鸡腿即停（默认 50）
 
 示例:
-  python auto_play.py              # 弹出选择菜单（上下箭头选择）
-  python auto_play.py mumu         # 直接指定MuMu模拟器
-  python auto_play.py leidian      # 直接指定雷电模拟器
-  python auto_play.py ld           # 直接指定雷电模拟器（简写）
-  python auto_play.py --emulator leidian
+  python auto_play.py                            # 弹出选择菜单（上下箭头选择模拟器）
+  python auto_play.py --emulator mumu            # 指定 MuMu
+  python auto_play.py --emulator leidian         # 指定雷电
+  python auto_play.py --emulator auto            # 自动检测
+  python auto_play.py --mode patrol              # 快速巡逻模式（长选项）
+  python auto_play.py -m patrol                  # 快速巡逻模式（短选项）
+  python auto_play.py -e auto -m patrol          # 短选项：自动检测 + 快速巡逻
+  python auto_play.py -m patrol -s 80            # 自定义鸡腿停止阈值 80
 
 其他参数:
   --help, -h    显示此帮助信息
         """)
         sys.exit(0)
-    if "--emulator" in args:
-        idx = args.index("--emulator")
-        if idx + 1 < len(args):
-            emulator = args[idx + 1].lower()
-            return _normalize_emulator(emulator)
-    for arg in args:
-        if not arg.startswith("-"):
-            return _normalize_emulator(arg.lower())
-    return select_emulator_interactive()
+
+    mode = "battle"
+    emulator = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg.startswith("--mode="):
+            mode = _validate_mode(arg.split("=", 1)[1])
+        elif arg in ("-m", "--mode"):
+            if i + 1 >= len(args):
+                print("❌ --mode/-m 缺少参数")
+                sys.exit(1)
+            mode = _validate_mode(args[i + 1])
+            i += 1
+        elif arg.startswith("-m="):
+            mode = _validate_mode(arg.split("=", 1)[1])
+        elif arg.startswith("--emulator="):
+            emulator = _normalize_emulator(arg.split("=", 1)[1])
+        elif arg in ("-e", "--emulator"):
+            if i + 1 >= len(args):
+                print("❌ --emulator/-e 缺少参数")
+                sys.exit(1)
+            emulator = _normalize_emulator(args[i + 1])
+            i += 1
+        elif arg.startswith("-e="):
+            emulator = _normalize_emulator(arg.split("=", 1)[1])
+        elif arg.startswith("--min-stamina="):
+            config.STOP_STAMINA_THRESHOLD = _validate_stamina(arg.split("=", 1)[1])
+        elif arg in ("-s", "--min-stamina"):
+            if i + 1 >= len(args):
+                print("❌ --min-stamina/-s 缺少参数")
+                sys.exit(1)
+            config.STOP_STAMINA_THRESHOLD = _validate_stamina(args[i + 1])
+            i += 1
+        elif arg.startswith("-s="):
+            config.STOP_STAMINA_THRESHOLD = _validate_stamina(arg.split("=", 1)[1])
+        elif arg.startswith("-"):
+            print(f"❌ 未知参数: {arg}（仅支持 --emulator/-e / --mode/-m）")
+            sys.exit(1)
+        else:
+            print(f"❌ 不支持位置参数: {arg}（请使用 --emulator/-e / --mode/-m）")
+            sys.exit(1)
+        i += 1
+
+    config.MODE = mode
+    if emulator is None:
+        return select_emulator_interactive()
+    return emulator
+
+
+def _validate_mode(mode):
+    """校验运行模式参数，返回小写模式名；非法则报错退出"""
+    mode = mode.lower()
+    if mode not in ("battle", "patrol"):
+        print(f"❌ 未知模式: {mode}（仅支持 battle / patrol）")
+        sys.exit(1)
+    return mode
+
+
+def _validate_stamina(value):
+    """校验自定义鸡腿停止阈值，返回正整数；非法则报错退出"""
+    try:
+        n = int(value)
+    except ValueError:
+        print(f"❌ 鸡腿阈值需为整数: {value}")
+        sys.exit(1)
+    if n <= 0:
+        print(f"❌ 鸡腿阈值需为正整数: {value}")
+        sys.exit(1)
+    return n
 
 
 def enable_ansi_escape():
@@ -151,6 +230,7 @@ def main():
     if config.SKILL_STRATEGY == "priority":
         strategy_display = f"priority（已配置{len(config.SKILL_PRIORITIES)}个词条）"
     print(f"  策略 : 技能选 {strategy_display}")
+    print(f"  鸡腿停止阈值: {config.STOP_STAMINA_THRESHOLD}")
     print("  停止 : Ctrl+C")
     print("-" * 55)
 
@@ -169,6 +249,18 @@ def main():
     print(f"      截图尺寸: {test.size}")
     print("-" * 55)
     print(f"✅ 启动成功！模拟器: {emulator_name}，开始自动闯关\n")
+
+    if config.MODE == "patrol":
+        print("🚓 进入快速巡逻模式")
+        try:
+            patrol.run_quick_patrol()
+        except patrol.OutOfStamina:
+            print("🍗 体力（鸡腿）不足，停止脚本")
+            sys.exit(config.OUT_OF_STAMINA_EXIT)
+        except patrol.BagFull:
+            print("🎒 背包已满，停止脚本")
+            sys.exit(config.BAG_FULL_EXIT)
+        return
 
     skill_cnt = 0
     level_cnt = 0
@@ -197,6 +289,14 @@ def main():
             ocr_time = time.time() - t1
             text_count = len(ocr_result) if ocr_result else 0
             print(f"[{time.strftime('%H:%M:%S')}] 📸 截图{screenshot_time:.1f}s + 🔍 OCR{ocr_time:.1f}s({text_count}字)")
+
+            # 体力(鸡腿)不足：回到战斗-关卡选择并停止脚本
+            stamina = states.get_stamina(img)
+            if stamina is not None and stamina < config.STOP_STAMINA_THRESHOLD:
+                print(f"[{time.strftime('%H:%M:%S')}] 🍗 体力(鸡腿) {stamina} 不足 {config.STOP_STAMINA_THRESHOLD}，停止循环闯关")
+                device.click_bottom_nav("战斗")
+                time.sleep(1.5)
+                sys.exit(config.OUT_OF_STAMINA_EXIT)
 
             status = "战斗中"
 
@@ -451,6 +551,7 @@ def main():
         print(f"\n❌ 运行出错: {e}")
         import traceback
         traceback.print_exc()
+        sys.exit(1)  # 非0退出码：交给启动器按契约判定为「崩溃→重启」
     finally:
         if os.path.exists(SCREENSHOT_LOCAL):
             try:

@@ -47,7 +47,8 @@ ACTIVITY_CENTER_CLOSE_BTN = (1005, 250)  # 活动中心界面右上角 × 关闭
 
 # 各类界面点击坐标（基准 1080×1920，运行时由 device.tap 自动缩放）
 LEVEL_DETAIL_CLOSE_BTN = (890, 238)    # 关卡详情弹窗右上角 ×
-REWARD_BOTTOM_BTN = (100, 1750)       # 奖励界面/精英掉落/已激活技能弹窗左下角关闭
+REWARD_BOTTOM_BTN = (100, 1750)       # 精英掉落/已激活技能弹窗左下角关闭
+REWARD_CLOSE_BTN = (850, 1684)        # 奖励弹窗「确定/关闭」按钮（开始游戏按钮右侧+310/下+90）
 BLANK_CLOSE_BTN = (540, 1720)         # 点击空白处关闭（巡逻/扫荡等，避开技能卡片）
 LEVEL_UP_CLOSE_BTN = (540, 1844)      # 等级提升「点击屏幕继续」
 RECONNECT_FAIL_BTN = (540, 1200)      # 重连失败弹窗「确定」
@@ -67,6 +68,20 @@ BOTTOM_NAV_BUTTONS = [
     ("军团", 839, 1871),
     ("征途", 989, 1871),
 ]
+
+# ============================================================
+#  快速巡逻模式配置（基准 1080×1920，识别后固化）
+# ============================================================
+PATROL_CAR_BTN = (110, 1643)                       # 战斗界面左下角"巡逻车"按钮（OCR 识别）
+QUICK_PATROL_BTN_REGION = (150, 1400, 450, 1550)   # 巡逻车弹窗内"快速巡逻"按钮区域
+PATROL_CLAIM_REGION = (300, 1100, 800, 1600)       # 巡逻车弹窗内"领取"按钮大致区域，实机校准时可微调
+PATROL_TIME_REGION = (455, 815, 625, 870)          # 巡逻车弹窗内正计时文本区域（实测1080x1920：文本中心约(540,842)）
+STAMINA_REGION = (675, 65, 825, 108)              # 顶部体力(鸡腿)数量区域（实测1080x1920：文本如 57258/50，中心约(750,86)）
+STAMINA_PER_PATROL = 50                           # 一次快速巡逻消耗的鸡腿(体力)数量
+OUT_OF_STAMINA_EXIT = 10                          # 体力不足时 auto_play 退出码，launcher 据此停止而非重启
+BAG_FULL_EXIT = 11                                # 背包已满时 auto_play 退出码，launcher 据此停止而非重启
+STOP_STAMINA_THRESHOLD = STAMINA_PER_PATROL      # 鸡腿(体力)低于此值即停止脚本；可被启动参数 --min-stamina/-s 覆盖，默认同一次巡逻消耗
+
 SELECTED_BRIGHTNESS_THRESHOLD = 650  # 选中状态亮度阈值（选中>650，未选中<620）
 
 # ============================================================
@@ -87,6 +102,7 @@ CHEST_CLICK_POSITIONS = {
 #  运行时可变状态（必须经由 config.xxx 读写）
 # ============================================================
 screen_w, screen_h = 1080, 1920   # 实际分辨率（main 连接后填充）
+MODE = "battle"                    # 运行模式：battle（循环闯关，默认）/ patrol（快速巡逻）
 in_battle_loop = False            # 状态机开关
 _wave_miss_count = 0              # 连续未检测到波次的计数
 _ocr_reader = None                # OCR 阅读器（懒加载，只初始化一次）
@@ -136,6 +152,7 @@ __all__ = [
     "ACTIVITY_CENTER_CLOSE_BTN",
     "LEVEL_DETAIL_CLOSE_BTN",
     "REWARD_BOTTOM_BTN",
+    "REWARD_CLOSE_BTN",
     "BLANK_CLOSE_BTN",
     "LEVEL_UP_CLOSE_BTN",
     "RECONNECT_FAIL_BTN",
@@ -146,4 +163,12 @@ __all__ = [
     "SELECTED_BRIGHTNESS_THRESHOLD",
     "CHEST_REGIONS",
     "CHEST_CLICK_POSITIONS",
+    "PATROL_CAR_BTN",
+    "QUICK_PATROL_BTN_REGION",
+    "PATROL_CLAIM_REGION",
+    "PATROL_TIME_REGION",
+    "STAMINA_REGION",
+    "STAMINA_PER_PATROL",
+    "STOP_STAMINA_THRESHOLD",
+    "BAG_FULL_EXIT",
 ]

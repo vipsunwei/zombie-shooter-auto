@@ -36,11 +36,12 @@ def close_level_detail_popup():
 
 
 def close_reward_popup():
-    """关闭奖励界面（点击左下角）"""
-    tap_pos = REWARD_BOTTOM_BTN
-    print(f"    → 点击左下角关闭奖励界面")
+    """关闭奖励界面（点击 (850,1684) 空白关闭区，连点两次间隔1s，安全无副作用）。"""
+    tap_pos = REWARD_CLOSE_BTN
     device.tap(tap_pos)
     time.sleep(1)
+    device.tap(tap_pos)
+    print(f"    ✅ 已点击奖励关闭区 {tap_pos} 两次")
     return True
 
 

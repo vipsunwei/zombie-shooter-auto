@@ -6,10 +6,12 @@ auto_play.py 热更新启动器
 监控 auto_play.py 的文件变化，检测到修改后自动重启。
 
 使用方法：
-  python launcher.py
+  python launcher.py                 # 默认 battle 模式
+  python launcher.py --mode patrol   # 快速巡逻模式（--mode 透传给 auto_play.py）
+  python launcher.py --mode=patrol   # 等价写法
 
 配置说明：
-  编辑下方 EMULATOR_ARG 变量，指定传给 auto_play.py 的模拟器参数：
+  编辑下方 EMULATOR_ARG 变量，指定传给 auto_play.py 的模拟器（作为 --emulator 参数的值）：
   - "auto"    = 自动检测模拟器（默认，推荐开发用）
   - "mumu"    = 指定MuMu模拟器
   - "leidian" = 指定雷电模拟器
@@ -17,12 +19,21 @@ auto_play.py 热更新启动器
   - ""        = 弹出选择菜单（不推荐，热更新重启后会卡住等待输入）
 
 停止：Ctrl+C（会同时停止 auto_play.py）
+
+退出码约定（auto_play.py 与启动器据此判断「停止」还是「重启」）：
+  - 0                          = 正常结束 / 用户手动停止(Ctrl+C)  → 停止，不重启
+  - config.OUT_OF_STAMINA_EXIT = 体力(鸡腿)不足，自动停止          → 停止，不重启
+  - config.BAG_FULL_EXIT       = 背包已满，自动停止                → 停止，不重启
+  - 其它非0                    = 运行时异常崩溃                    → 重启(热更新容错)
+无论用本启动器还是 `python auto_play.py --mode xxx` 直接运行，停止逻辑都一致。
 """
 
 import subprocess
 import sys
 import time
 import os
+
+import config
 
 # 要监控和运行的脚本
 TARGET_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "auto_play.py")
@@ -42,6 +53,35 @@ RESTART_DELAY = 0.5
 
 # 监控范围内需要排除的文件（改自身会递归重启，排除掉）
 EXCLUDE = {"launcher.py"}
+
+
+def parse_launcher_args(argv):
+    """从 launcher 命令行参数中提取需要透传给 auto_play.py 的参数。
+
+    目前支持 --mode <mode> 与 --mode=<mode> 两种写法；其余参数忽略
+    （模拟器仍由上方 EMULATOR_ARG 常量控制）。返回透传参数列表，例如
+    ["--mode", "patrol"] 或 ["--mode=patrol"]。
+    """
+    passthrough = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--mode":
+            # --mode <value>
+            passthrough.append(a)
+            if i + 1 < len(argv):
+                passthrough.append(argv[i + 1])
+                i += 2
+            else:
+                i += 1
+            continue
+        if a.startswith("--mode="):
+            passthrough.append(a)
+            i += 1
+            continue
+        # 其它参数忽略，保持向后兼容
+        i += 1
+    return passthrough
 
 
 def get_latest_mtime():
@@ -69,6 +109,8 @@ def main():
     print(f"  Python: {PYTHON}")
     print(f"  目标脚本: {TARGET_SCRIPT}")
     print(f"  模拟器参数: {EMULATOR_ARG if EMULATOR_ARG else '(弹出选择菜单)'}")
+    MODE_ARGS = parse_launcher_args(sys.argv[1:])
+    print(f"  透传参数: {' '.join(MODE_ARGS) if MODE_ARGS else '(无，默认 battle 模式)'}")
     print(f"  检测间隔: {CHECK_INTERVAL}s")
     print("  改完脚本保存后自动重启，Ctrl+C 停止")
     print("-" * 55)
@@ -86,12 +128,25 @@ def main():
             # 启动子进程
             if proc is None or proc.poll() is not None:
                 if proc is not None and proc.poll() is not None:
-                    print(f"\n[{time.strftime('%H:%M:%S')}] ⚠ auto_play.py 已退出，重新启动...")
+                    rc = proc.returncode
+                    # 退出码 0（正常/手动停止）或 10（体力不足）都应停止，不重启；
+                    # 其它非0 视为运行时崩溃，借热更新机制自动重启。
+                    if rc == 0 or rc == config.OUT_OF_STAMINA_EXIT or rc == config.BAG_FULL_EXIT:
+                        if rc == 0:
+                            reason = "正常结束/手动停止"
+                        elif rc == config.OUT_OF_STAMINA_EXIT:
+                            reason = "体力不足"
+                        else:
+                            reason = "背包已满"
+                        print(f"\n[{time.strftime('%H:%M:%S')}] 🛑 {reason}，停止启动器（不再重启）")
+                        return
+                    print(f"\n[{time.strftime('%H:%M:%S')}] ⚠ auto_play.py 异常退出(码{rc})，重新启动...")
                 print(f"\n[{time.strftime('%H:%M:%S')}] ▶ 启动 auto_play.py")
-                # 构建命令：如果配置了模拟器参数就传入，否则不传（弹出选择菜单）
+                # 构建命令：EMULATOR_ARG 作为 --emulator 传入；为空则不传（弹出选择菜单）
                 cmd = [PYTHON, TARGET_SCRIPT]
                 if EMULATOR_ARG:
-                    cmd.append(EMULATOR_ARG)
+                    cmd.extend(["--emulator", EMULATOR_ARG])
+                cmd.extend(MODE_ARGS)
                 proc = subprocess.Popen(
                     cmd,
                     cwd=os.path.dirname(TARGET_SCRIPT)

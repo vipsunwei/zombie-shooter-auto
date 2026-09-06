@@ -8,12 +8,49 @@
 不依赖 device，从而避免 device<->states 循环依赖。
 """
 
+import re
 import numpy as np
 from PIL import Image
 
 import config
 from config import *
 from vision import has_text, find_text, get_text_position, wave_white_ratio, get_ocr_reader
+
+
+# 巡逻可领取时间点：正计时小时 >= 11 即可领（11:xx:xx ~ 12:xx:xx，兼容半角/全角冒号、点号）
+_PATROL_CLAIMABLE_RE = re.compile(
+    r'(?<!\d)(1[1-9]|[2-9]\d)(?:\s*[:：\.]\s*\d{2}){2}(?!\d)'
+)
+
+
+def get_stamina(img):
+    """读取顶部体力(鸡腿)数量，返回 int 或 None。
+
+    对顶部体力区域(STAMINA_REGION)独立裁剪 OCR，不依赖全局 OCR 缓存，
+    因此在战斗循环(ocr_battle_loop 裁剪区域)中也能可靠识别。
+    区域文本形如 '53263/50'（当前/单次消耗）。OCR 可能把数字拆成多块或误识，
+    故收集区域内所有整数，返回最大值（当前鸡腿数远大于单次消耗 50 与误识碎片）。
+    """
+    if img is None:
+        return None
+    x1, y1, x2, y2 = scale_region(STAMINA_REGION)
+    crop = img.crop((x1, y1, x2, y2))
+    reader = get_ocr_reader()
+    result = reader.readtext(np.array(crop))
+    best = None
+    for item in result:
+        if len(item) < 3:
+            continue
+        text = item[1]
+        # 同一文本块可能含多个数字（如 '53263/50'），逐块取最大值
+        for m in re.finditer(r"\d+", text):
+            try:
+                val = int(m.group().replace(",", ""))
+            except ValueError:
+                continue
+            if best is None or val > best:
+                best = val
+    return best
 
 
 # ============================================================
@@ -66,6 +103,18 @@ def is_unclaimed_reward(img=None):
 def is_reward_popup(img=None):
     """检测是否是奖励展示界面（"恭喜获得"）"""
     return has_text("恭喜获得", region=(300, 500, 800, 700), min_confidence=0.3)
+
+
+def is_bag_full(img=None):
+    """检测背包已满提示（弹窗内'背包已满'/'背包空间不足'等）。
+
+    仅匹配'背包已满'而非常单独'背包'，避免与底部'背包'导航按钮混淆。
+    """
+    if has_text("背包已满", min_confidence=0.3):
+        return True
+    if has_text("背包空间不足", min_confidence=0.3):
+        return True
+    return False
 
 
 def is_claimable_chest(chest_name):
@@ -175,6 +224,38 @@ def is_patrol(img):
         return True
     if has_text("最长巡逻", region=(300, 700, 600, 800), min_confidence=0.3):
         if has_text("点击空白处关闭", region=(300, 1750, 780, 1900), min_confidence=0.3):
+            return True
+    return False
+
+
+def is_patrol_claim(img=None):
+    """检测巡逻弹窗内「领取」按钮（限定区域，避开未领取奖励区域）"""
+    return has_text("领取", region=PATROL_CLAIM_REGION, min_confidence=0.4)
+
+
+def is_patrol_claimable(img=None):
+    """检测巡逻是否已到可领取时间点（正计时 11~12 小时即可领）。
+
+    巡逻【领取】按钮是常驻的，不要求满 12 小时；满 12 小时只是可领物品最多。
+    因此当正计时到达约 11 小时（文本小时位 >= 11，例如 11:xx:xx / 12:00:00）
+    即可点领取。通过正则匹配 PATROL_TIME_REGION 区域内小时 >= 11 的时间文本，
+    兼容半角/全角冒号、点号等 OCR 常见误识；0 小时（00:xx:xx）不会命中。
+    """
+    result = config._current_ocr_result
+    if result is None:
+        return False
+    x1, y1, x2, y2 = scale_region(PATROL_TIME_REGION)
+    for item in result:
+        if len(item) < 3:
+            continue
+        box, text, confidence = item
+        if confidence < 0.3:
+            continue
+        cx = sum(p[0] for p in box) / 4
+        cy = sum(p[1] for p in box) / 4
+        if not (x1 <= cx <= x2 and y1 <= cy <= y2):
+            continue
+        if _PATROL_CLAIMABLE_RE.search(text):
             return True
     return False
 

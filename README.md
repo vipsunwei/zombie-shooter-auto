@@ -12,6 +12,7 @@
 - **热更新支持**：配合 launcher.py，修改任意模块后自动重启（监控整个项目目录的 .py 文件）
 - **自动清理截图**：每关通关后自动清理本关截图
 - **智能词条选择**：支持按优先级选择最优词条，未配置的随机选择（更像人在玩）
+- **快速巡逻模式**：`--mode patrol` 自动快速巡逻，满12小时自动领取奖励，体力(鸡腿)不足(<50)或背包已满自动停止并回到战斗-关卡选择
 
 ## 🎮 支持的游戏界面
 
@@ -102,30 +103,60 @@ pip install -r requirements.txt
 ### 命令行参数
 
 ```bash
-# 弹出选择菜单（默认）
+# 弹出选择菜单（默认 battle 闯关模式，需手动选择模拟器）
 python auto_play.py
 
-# 直接指定 MuMu 模拟器
-python auto_play.py mumu
+# 指定 MuMu 模拟器
+python auto_play.py --emulator mumu
 
-# 直接指定雷电模拟器
-python auto_play.py leidian
+# 指定雷电模拟器
+python auto_play.py --emulator leidian
 # 或简写
-python auto_play.py ld
+python auto_play.py --emulator ld
 
 # 自动检测模拟器
-python auto_play.py auto
+python auto_play.py --emulator auto
+
+# 快速巡逻模式（自动巡逻 + 满12小时领取 + 体力不足停止）
+python auto_play.py --mode patrol
+# 短选项等价写法
+python auto_play.py -m patrol
+# 自动检测模拟器 + 快速巡逻
+python auto_play.py --emulator auto --mode patrol
+# 短选项等价写法
+python auto_play.py -e auto -m patrol
+# 自定义鸡腿停止阈值（剩 80 鸡腿即停，长/短选项均可）
+python auto_play.py -m patrol --min-stamina 80
+python auto_play.py -m patrol -s 80
+
+# 显式指定闯关模式（默认就是 battle，可省略）
+python auto_play.py --mode battle
 
 # 查看帮助
 python auto_play.py --help
 ```
+
+### 巡逻模式（--mode patrol）
+
+自动快速巡逻：循环点击「快速巡逻」，界面出现「领取」按钮（累计巡逻满 12 小时）时自动领取奖励。
+
+- **满 12 小时判定**：巡逻计时为**正计时**（从 `00:00:00` 累加），小时数 ≥ 11（即 `11:xx:xx` ~ `12:xx:xx`）即视为可领取，兼容 OCR 半角/全角冒号、点号误识。
+- **体力(鸡腿)不足自动停止**：每轮检测顶部体力，剩余 `< 自定义阈值`（默认 50，可用 `--min-stamina`/`-s` 调整，见上方示例）时自动回到「战斗-关卡选择」界面并停止脚本（退出码 `10`），不会卡在巡逻弹窗。
+- **背包已满自动停止**：点击「快速巡逻」后核对鸡腿是否真的减少（正常每次消耗约 50）。背包满时点击会被拦截、鸡腿不减少；连续 3 次点击后鸡腿均未明显减少（消耗差值 < 30）即判定背包已满，关闭巡逻弹窗并停止脚本（退出码 `11`）。该判断基于鸡腿消耗差值，不依赖一闪即逝的「背包已满」提示文字，避免漏判。
+- 停止方式与闯关模式一致：`Ctrl+C` 手动停止，或体力耗尽（退出码 `10`）/背包已满（退出码 `11`）自动停止。
+
+> 💡 巡逻弹窗关闭后即为战斗-关卡选择界面，与闯关模式的停止位置相同。
 
 ### 热更新模式（开发用）
 
 修改任意模块后自动重启，无需手动停止：
 
 ```bash
+# 默认 battle 闯关模式
 python launcher.py
+
+# 快速巡逻模式（--mode 透传给 auto_play.py）
+python launcher.py --mode patrol
 ```
 
 - 监控项目目录下**所有 `.py` 文件**变化（含 `auto_play.py` 及各子模块 `config/device/vision/states/popups/skills/rewards`）
@@ -133,6 +164,12 @@ python launcher.py
 - 按 `Ctrl+C` 停止
 
 > 💡 **开发提示**：launcher.py 默认传入 `auto` 参数（自动检测模拟器），不会弹出选择菜单，热更新重启后能直接继续运行。如需指定模拟器，编辑 launcher.py 顶部的 `EMULATOR_ARG` 变量即可。
+
+> 🛑 **智能停止（退出码契约）**：launcher 依据子进程退出码决定是否重启——
+> - `0`（正常结束 / `Ctrl+C` 手动停止）、`10`（体力不足自动停止）或 `11`（背包已满自动停止）→ **停止，不重启**
+> - 其它非0（运行时崩溃）→ **自动重启**（热更新容错）
+>
+> 无论用 `launcher.py` 还是直接 `python auto_play.py --mode xxx`，停止判定都一致。
 
 ## 🧪 单元测试
 
