@@ -120,10 +120,10 @@ def run_quick_patrol(max_loops=None):
 
             # 2) 处于巡逻车弹窗：先查体力，不足则停止；否则处理领取/快速巡逻
             if states.is_patrol(img):
-                # 体力(鸡腿)检查：不足一次快速巡逻消耗就关弹窗并停止脚本
-                stamina = states.get_stamina(img)
-                if stamina is not None and stamina < config.STOP_STAMINA_THRESHOLD:
-                    print(f"[{_ts()}] 🍗 体力(鸡腿) {stamina} 不足 {config.STOP_STAMINA_THRESHOLD}，停止快速巡逻")
+                # 体力(鸡腿)检查：不足一次快速巡逻消耗就关弹窗并停止脚本（带复核防误停）
+                low, stamina = states.stamina_below_confirmed(img, config.STOP_STAMINA_THRESHOLD, device.screenshot)
+                if low:
+                    print(f"[{_ts()}] 🍗 体力(鸡腿) {stamina} 不足 {config.STOP_STAMINA_THRESHOLD}（已复核确认），停止快速巡逻")
                     popups.click_blank_to_close()
                     time.sleep(1)
                     raise OutOfStamina

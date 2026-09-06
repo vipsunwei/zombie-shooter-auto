@@ -35,6 +35,9 @@ def get_stamina(img):
         return None
     x1, y1, x2, y2 = scale_region(STAMINA_REGION)
     crop = img.crop((x1, y1, x2, y2))
+    # 区域原图仅约150×43px，数字小，OCR 易丢位/误识（如 44436 读成 4436）；
+    # 放大 3 倍后再识别可显著降低误读率
+    crop = crop.resize((crop.width * 3, crop.height * 3), Image.LANCZOS)
     reader = get_ocr_reader()
     result = reader.readtext(np.array(crop))
     best = None
@@ -51,6 +54,28 @@ def get_stamina(img):
             if best is None or val > best:
                 best = val
     return best
+
+
+def stamina_below_confirmed(img, threshold, recheck_fn, retries=2):
+    """判断体力(鸡腿)是否低于阈值（带复核），返回 (是否不足, 最终读数)。
+
+    单次 OCR 丢位/误识可能把 44436 读成 4436 之类的低值，导致未到阈值就误停。
+    首读低于阈值时，用 recheck_fn 重新截图再识别 retries 次：
+    - 任一次复核读数 ≥ 阈值 → 判定首读为误读，不停止（返回复核值）
+    - 复核读不到(None) → 视为不确定，不停止，下轮循环再判
+    - 连续 retries 次复核均低于阈值 → 确认不足，停止
+    首读达标时不触发复核，无额外截图开销。
+    """
+    stamina = get_stamina(img)
+    if stamina is None or stamina >= threshold:
+        return False, stamina
+    for _ in range(retries):
+        s = get_stamina(recheck_fn())
+        if s is not None and s >= threshold:
+            return False, s
+        if s is None:
+            return False, stamina
+    return True, stamina
 
 
 # ============================================================

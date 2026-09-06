@@ -287,9 +287,9 @@ def _on_level_select(ctx, img):
         ctx.unknown_cnt = 0
         return CONTINUE
     # 点开始游戏前判断鸡腿是否足够开下一关；不足则停止脚本（游戏循环中不判断）
-    stamina = states.get_stamina(img)
-    if stamina is not None and stamina < config.STOP_STAMINA_THRESHOLD:
-        _log(f"🍗 体力(鸡腿) {stamina} 不足 {config.STOP_STAMINA_THRESHOLD}，停止循环闯关")
+    low, stamina = states.stamina_below_confirmed(img, config.STOP_STAMINA_THRESHOLD, device.screenshot)
+    if low:
+        _log(f"🍗 体力(鸡腿) {stamina} 不足 {config.STOP_STAMINA_THRESHOLD}（已复核确认），停止循环闯关")
         device.click_bottom_nav("战斗")
         time.sleep(1.5)
         sys.exit(config.OUT_OF_STAMINA_EXIT)

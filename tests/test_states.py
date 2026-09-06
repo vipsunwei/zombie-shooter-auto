@@ -43,3 +43,43 @@ def test_get_glowing_chests():
         gold_img = Image.fromarray(arr)
         glowing = states.get_glowing_chests(gold_img)
         assert name in glowing, f"{name} 应被识别为发光，实际: {glowing}"
+
+
+# ============================================================
+#  stamina_below_confirmed（体力阈值复核，防 OCR 误读误停）
+# ============================================================
+
+def _patch_reads(monkeypatch, reads):
+    it = iter(reads)
+    monkeypatch.setattr(states, "get_stamina", lambda img: next(it))
+    return lambda: None  # recheck_fn 桩，不再触发真实截图
+
+
+def test_stamina_above_threshold_no_recheck(monkeypatch):
+    # 首读达标 → 直接不停止，且不触发复核
+    called = []
+    monkeypatch.setattr(states, "get_stamina", lambda img: 44436)
+    recheck = lambda: called.append(1)
+    low, val = states.stamina_below_confirmed(None, 44000, recheck)
+    assert low is False and val == 44436 and not called
+
+
+def test_stamina_misread_corrected_by_recheck(monkeypatch):
+    # 首读 4436（OCR 丢位误读），复核读回 44436 → 不停止
+    recheck = _patch_reads(monkeypatch, [4436, 44436])
+    low, val = states.stamina_below_confirmed(None, 44000, recheck)
+    assert low is False and val == 44436
+
+
+def test_stamina_confirmed_low_stops(monkeypatch):
+    # 首读与两次复核均低于阈值 → 确认不足
+    recheck = _patch_reads(monkeypatch, [4436, 4420, 4410])
+    low, val = states.stamina_below_confirmed(None, 44000, recheck)
+    assert low is True and val == 4436
+
+
+def test_stamina_recheck_none_inconclusive(monkeypatch):
+    # 复核读不到（None）→ 视为不确定，不停止，留待下轮再判
+    recheck = _patch_reads(monkeypatch, [4436, None])
+    low, val = states.stamina_below_confirmed(None, 44000, recheck)
+    assert low is False and val == 4436
