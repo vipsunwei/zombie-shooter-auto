@@ -224,7 +224,7 @@ def _on_unclaimed(ctx, img):
     if img2 is not None:
         vision.ocr_screenshot(img2)
         if states.is_reward_popup(img2):
-            print("    → 检测到奖励展示界面 → 关闭")
+            _log("    → 检测到奖励展示界面 → 关闭")
             popups.close_reward_popup()
     perfect_pos = None
     for retry in range(3):
@@ -232,29 +232,29 @@ def _on_unclaimed(ctx, img):
         if img3 is not None:
             vision.ocr_screenshot(img3)
             if retry == 0:
-                print("    → 在下半部分检测完美通关宝箱...")
+                _log("    → 在下半部分检测完美通关宝箱...")
             perfect_pos = states.is_claimable_chest("完美通关")
             if perfect_pos:
                 break
             else:
-                print(f"    → 第{retry + 1}次未识别到完美通关文字，{0.5 if retry < 2 else 0}秒后重试...")
+                _log(f"    → 第{retry + 1}次未识别到完美通关文字，{0.5 if retry < 2 else 0}秒后重试...")
                 time.sleep(0.5)
         else:
             break
     if perfect_pos:
-        print(f"    → 识别到完美通关文字，宝箱位置 {perfect_pos}，点击领取")
+        _log(f"    → 识别到完美通关文字，宝箱位置 {perfect_pos}，点击领取")
         device.tap(perfect_pos)
         time.sleep(2)
         img4 = device.screenshot()
         if img4 is not None:
             vision.ocr_screenshot(img4)
             if states.is_reward_popup(img4):
-                print("    → 检测到奖励展示界面 → 关闭")
+                _log("    → 检测到奖励展示界面 → 关闭")
                 popups.close_reward_popup()
             else:
-                print("    → 未弹出奖励界面（可能已领取）")
+                _log("    → 未弹出奖励界面（可能已领取）")
     else:
-        print("    → 多次重试仍未识别到完美通关文字（可能已领取或OCR未识别）")
+        _log("    → 多次重试仍未识别到完美通关文字（可能已领取或OCR未识别）")
     ctx.unknown_cnt = 0
     return "未领取奖励"
 
@@ -283,7 +283,7 @@ def _on_level_select(ctx, img):
     start_pos = vision.get_text_position(
         "开始游戏", region=(300, 1480, 780, 1680), min_confidence=0.1)
     if start_pos is None:
-        print("    ⚠ 未定位到「开始游戏」按钮（可能并非关卡选择界面或OCR未识别），本轮回退重试")
+        _log("    ⚠ 未定位到「开始游戏」按钮（可能并非关卡选择界面或OCR未识别），本轮回退重试")
         ctx.unknown_cnt = 0
         return CONTINUE
     # 点开始游戏前判断鸡腿是否足够开下一关；不足则停止脚本（游戏循环中不判断）
@@ -298,7 +298,7 @@ def _on_level_select(ctx, img):
     device.tap(start_pos)
     ctx.just_started = True
     ctx.just_start_time = time.time()
-    print("    → 验证是否真正进入战斗界面（最多6秒）...")
+    _log("    → 验证是否真正进入战斗界面（最多6秒）...")
     entered_battle = False
     for _ in range(12):  # 12 × 0.5s = 6s
         time.sleep(0.5)
@@ -315,20 +315,20 @@ def _on_level_select(ctx, img):
                 "开始游戏", region=(300, 1480, 780, 1680), min_confidence=0.1)
             if start_pos is None:
                 start_pos = START_BTN  # OCR未定位到则回退固定坐标
-            print(f"    → 仍在关卡选择页，重新点击开始游戏{start_pos}")
+            _log(f"    → 仍在关卡选择页，重新点击开始游戏{start_pos}")
             device.tap(start_pos)
             ctx.just_started = True
             ctx.just_start_time = time.time()
             continue
         if states.is_auto_close_popup(img_v):
-            print("    → 检测到已激活技能弹窗，点击左下角关闭")
+            _log("    → 检测到已激活技能弹窗，点击左下角关闭")
             popups.close_auto_close_popup()
             continue
         # 其余视为战斗加载/过渡画面，继续等待
     if entered_battle:
-        print("    ✅ 已确认进入战斗界面")
+        _log("    ✅ 已确认进入战斗界面")
     else:
-        print("    ⚠ 未在限定时间内确认进入战斗，回退到关卡选择重试")
+        _log("    ⚠ 未在限定时间内确认进入战斗，回退到关卡选择重试")
         config.in_battle_loop = False
         ctx.just_started = False
     ctx.unknown_cnt = 0
