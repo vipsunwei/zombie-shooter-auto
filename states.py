@@ -35,7 +35,11 @@ def get_stamina(img):
         return None
     x1, y1, x2, y2 = scale_region(STAMINA_REGION)
     crop = img.crop((x1, y1, x2, y2))
-    # 区域原图仅约150×43px，数字小，OCR 易丢位/误识（如 44436 读成 4436）；
+    # 区域原图仅约150×43px，数字小，且有渐变背景/金色文字，
+    # OCR 易把数字拆成多块（如 45219 拆成 4521 + 9），导致识别位数不足。
+    # 灰度二值化后变成纯黑底白字，OCR 可正确识别完整数字（实测置信度1.00）。
+    crop = crop.convert('L')
+    crop = crop.point(lambda x: 255 if x >= 128 else 0)
     # 放大 3 倍后再识别可显著降低误读率
     crop = crop.resize((crop.width * 3, crop.height * 3), Image.LANCZOS)
     reader = get_ocr_reader()
