@@ -145,7 +145,7 @@ def do_victory():
             else:
                 print(f"    → 不满足双倍奖励条件，直接点返回")
 
-    return_pos = vision.find_text("返回", min_confidence=0.5)
+    return_pos = vision.get_text_position("返回", region=VICTORY_RETURN_REGION, min_confidence=0.5)
     if return_pos:
         print(f"    → OCR识别到「返回」按钮位置 {return_pos}，点击返回")
         device.tap(return_pos)

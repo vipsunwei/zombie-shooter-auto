@@ -55,6 +55,7 @@ RECONNECT_FAIL_BTN = (540, 1200)      # 重连失败弹窗「确定」
 NEXT_LEVEL_BTN = (860, 812)           # 下一关右箭头
 REWARD_POPUP_CLOSE_BTN = (540, 1750)  # 奖励展示界面关闭（点击左下/空白）
 VICTORY_RETURN_FALLBACK = (754, 1695) # 通关「返回」兜底坐标
+VICTORY_RETURN_REGION = (500, 1600, 1030, 1800)  # 结算页「返回」OCR 检索区域（限定右下角，防止误匹配底部导航或其他含「返回」文案）
 
 # ============================================================
 #  底部导航栏配置（硬编码位置 + 亮度判断，不依赖 OCR）
@@ -164,6 +165,7 @@ __all__ = [
     "NEXT_LEVEL_BTN",
     "REWARD_POPUP_CLOSE_BTN",
     "VICTORY_RETURN_FALLBACK",
+    "VICTORY_RETURN_REGION",
     "BOTTOM_NAV_BUTTONS",
     "SELECTED_BRIGHTNESS_THRESHOLD",
     "CHEST_REGIONS",
