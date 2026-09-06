@@ -9,6 +9,27 @@
 
 （暂无变更）
 
+## [2.0.1] - 2026-09-07
+
+### 🔧 重构
+
+- _wave_miss_count 封装为访问器，消除私有变量直接访问 (e831cb0)
+- 检测区域坐标全部接入分辨率缩放 (f5311c4)
+- handlers.py 13 处裸 print 统一替换为 _log与其他日志保持一致的时间戳格式，便于排查问题 (74bd405)
+- close_reward_popup 改为验证式关闭原实现连点两次关闭区且不验证，第二次点击可能在弹窗已关闭后误触其他界面；改为 device.close_with_verify，与其他 close_* 风格统一 (dfaa20f)
+
+### 🐛 修复
+
+- 鸡腿识别放大3倍+停机前复核，防止OCR误读导致提前停止 (1564320)
+- 战斗兜底的「返回」检测限定到结算页右下区域 (d20ffcb)
+- do_victory 的「返回」检索限定到结算页右下区域，防止误点 (8f5f0c6)
+- 修正 rewards.py 中 close_with_verify 的模块归属错误该方法定义在 device 模块，误写为 popups.close_with_verify，运行到宝箱领取流程时会抛 AttributeError (d7c1e73)
+- 修正 CHEST_REGIONS 元组顺序为 (x1, y1, x2, y2)原配置实际是 (x1, x2, y1, y2) 顺序，与 states.py 的解包约定及全项目其他区域配置不一致，导致宝箱检测区被裁剪到 y 320~925，完全覆盖不到宝箱图标（y 1230~1420），发光判定永远失效。- config.py: 三个区域归位为 (x1, y1, x2, y2) 约定- tests/test_states.py: 修正过时的重叠关系注释 (1681d54)
+
+### 🔨 构建
+
+- 清理 device/vision 小问题（死代码、图片句柄、端口死循环） (412de3a)
+
 ## [2.0.0] - 2026-09-06
 
 ### ✨ 新增
@@ -146,7 +167,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.0.0...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.1
 [2.0.0]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.0
 [1.0.9]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.9
 [1.0.8]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.8
