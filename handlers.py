@@ -106,7 +106,7 @@ def _on_skill_select(ctx, img):
     ctx.skill_cnt += 1
     if left_name or middle_name or right_name:
         if selected_score > 0:
-            _log(f"⚡ 选择技能 [{left_name}|{middle_name}|{right_name}] → 选[{selected_name}]，优先级({selected_score})")
+            _log(f"⚡ 选择技能 [{left_name}|{middle_name}|{right_name}] → 选[{selected_name}]，优先级({selected_score:.1f})")
         else:
             _log(f"⚡ 选择技能 [{left_name}|{middle_name}|{right_name}] → 选[{selected_name}]，随机选择")
     else:
