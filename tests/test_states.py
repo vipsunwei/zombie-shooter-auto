@@ -127,3 +127,34 @@ def test_get_stamina_adjacent_no_overlap(monkeypatch):
         states, "get_ocr_reader",
         lambda: _fake_reader([(0, 50, "45139"), (300, 380, "50")]))
     assert states.get_stamina(_blank_img()) == 45139
+
+
+# ============================================================
+#  is_patrol_claimable（满时间文案 / 时间正则）
+# ============================================================
+
+def _set_ocr(monkeypatch, text, x=(414, 651), y=(822, 854), conf=0.99):
+    """把 config._current_ocr_result 设为单个文本块（坐标取自实机截图）"""
+    box = [(x[0], y[0]), (x[1], y[0]), (x[1], y[1]), (x[0], y[1])]
+    monkeypatch.setattr(config, "_current_ocr_result", [(box, text, conf)], raising=False)
+
+
+def test_patrol_claimable_when_full_time(monkeypatch):
+    # 满时间：游戏显示「已达到最大巡逻时间！」而非 HH:MM:SS，必须识别为可领取
+    _set_ocr(monkeypatch, "已达到最大巡逻时间！")
+    assert states.is_patrol_claimable() is True
+
+
+def test_patrol_claimable_by_time_regex(monkeypatch):
+    # 11 小时以上的正计时仍走原时间正则
+    _set_ocr(monkeypatch, "11:30:00", x=(455, 625), y=(815, 870))
+    assert states.is_patrol_claimable() is True
+
+    _set_ocr(monkeypatch, "05:30:00", x=(455, 625), y=(815, 870))
+    assert states.is_patrol_claimable() is False
+
+
+def test_patrol_claimable_not_fooled_by_hint_text(monkeypatch):
+    # 提示语「最长巡逻12小时…」含"巡逻"但不含"最大巡逻"，且在计时区之外，不应误判
+    _set_ocr(monkeypatch, "最长巡逻12小时，章节越高，收益越大", x=(304, 788), y=(737, 770))
+    assert states.is_patrol_claimable() is False

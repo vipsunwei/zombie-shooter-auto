@@ -77,6 +77,7 @@ PATROL_CAR_BTN = (110, 1643)                       # 战斗界面左下角"巡�
 QUICK_PATROL_BTN_REGION = (150, 1400, 450, 1550)   # 巡逻车弹窗内"快速巡逻"按钮区域
 PATROL_CLAIM_REGION = (300, 1100, 800, 1600)       # 巡逻车弹窗内"领取"按钮大致区域，实机校准时可微调
 PATROL_TIME_REGION = (455, 815, 625, 870)          # 巡逻车弹窗内正计时文本区域（实测1080x1920：文本中心约(540,842)）
+PATROL_TIME_FULL_REGION = (380, 800, 700, 880)     # 巡逻车弹窗内「已达到最大巡逻时间！」区域（满时间时不显示HH:MM:SS，改显示该文案；实测文本x=414~651,y=822~854）
 STAMINA_REGION = (675, 65, 825, 108)              # 顶部体力(鸡腿)数量区域（实测1080x1920：文本如 57258/50，中心约(750,86)）
 STAMINA_PER_PATROL = 50                           # 一次快速巡逻消耗的鸡腿(体力)数量
 OUT_OF_STAMINA_EXIT = 10                          # 体力不足时 auto_play 退出码，launcher 据此停止而非重启
@@ -217,6 +218,7 @@ __all__ = [
     "QUICK_PATROL_BTN_REGION",
     "PATROL_CLAIM_REGION",
     "PATROL_TIME_REGION",
+    "PATROL_TIME_FULL_REGION",
     "STAMINA_REGION",
     "STAMINA_PER_PATROL",
     "STOP_STAMINA_THRESHOLD",

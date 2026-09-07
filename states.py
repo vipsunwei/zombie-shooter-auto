@@ -304,7 +304,14 @@ def is_patrol_claimable(img=None):
     因此当正计时到达约 11 小时（文本小时位 >= 11，例如 11:xx:xx / 12:00:00）
     即可点领取。通过正则匹配 PATROL_TIME_REGION 区域内小时 >= 11 的时间文本，
     兼容半角/全角冒号、点号等 OCR 常见误识；0 小时（00:xx:xx）不会命中。
+
+    注意：巡逻时间【满】时，游戏不再显示 HH:MM:SS，而是显示
+    「已达到最大巡逻时间！」（实测置信度 0.99，位置 x=414~651, y=822~854）。
+    此时同样是（且是收益最高的）可领取状态，若不做识别会导致满时间反而漏领，
+    故先判断该文案再走时间正则。
     """
+    if has_text("最大巡逻", region=PATROL_TIME_FULL_REGION, min_confidence=0.3):
+        return True
     result = config._current_ocr_result
     if result is None:
         return False
