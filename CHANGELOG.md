@@ -9,6 +9,18 @@
 
 （暂无变更）
 
+## [2.0.2] - 2026-09-07
+
+### 🐛 修复
+
+- 巡逻满时间时识别「已达到最大巡逻时间」，避免漏领 (39efffb)
+- 鸡腿 OCR 拆块时返回 None，避免取到缺位数字导致误停 (0122bb0)
+- 鸡腿识别增加灰度二值化，根治数字拆分丢位 (79e988f)
+
+### 🎨 格式
+
+- 技能优先级日志格式化为一位小数 (9739128)
+
 ## [2.0.1] - 2026-09-07
 
 ### 🔧 重构
@@ -167,7 +179,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.0.1...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.0.2...HEAD
+[2.0.2]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.2
 [2.0.1]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.1
 [2.0.0]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.0
 [1.0.9]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v1.0.9
