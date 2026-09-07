@@ -235,17 +235,21 @@ def push_to_remote(new_version):
     print()
 
     tag_name = f"v{new_version}"
+    # Windows 版 Git 默认用 schannel 做 SSL 后端，与 Clash 等本地代理的
+    # MITM 握手不兼容，会报 schannel: SEC_E_ILLEGAL_MESSAGE。
+    # 统一改用 openssl 后端（非 Windows / 无 schannel 时该参数被忽略，无副作用）。
+    ssl_args = "-c http.sslBackend=openssl"
     # 自动探测代理
     proxy = detect_proxy()
     if proxy:
         print_color(f"🔍 检测到可用代理: {proxy}", Color.CYAN)
         proxy_args = f"-c http.proxy={proxy} -c https.proxy={proxy}"
-        push_cmd = f"git {proxy_args} push"
-        push_tag_cmd = f"git {proxy_args} push origin {tag_name}"
+        push_cmd = f"git {ssl_args} {proxy_args} push"
+        push_tag_cmd = f"git {ssl_args} {proxy_args} push origin {tag_name}"
     else:
         print_color("ℹ️  未检测到代理，直接推送", Color.CYAN)
-        push_cmd = "git push"
-        push_tag_cmd = f"git push origin {tag_name}"
+        push_cmd = f"git {ssl_args} push"
+        push_tag_cmd = f"git {ssl_args} push origin {tag_name}"
 
     # 推送代码
     print(f"→ {push_cmd}")
