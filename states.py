@@ -10,7 +10,7 @@
 
 import re
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 import config
 from config import *
@@ -28,28 +28,50 @@ def get_stamina(img):
 
     对顶部体力区域(STAMINA_REGION)独立裁剪 OCR，不依赖全局 OCR 缓存，
     因此在战斗循环(ocr_battle_loop 裁剪区域)中也能可靠识别。
-    区域文本形如 '53263/50'（当前/单次消耗）。OCR 可能把数字拆成多块或误识，
-    故收集区域内所有整数，返回最大值（当前鸡腿数远大于单次消耗 50 与误识碎片）。
+    区域文本形如 '45139/50'（当前/单次消耗）。同一文本块可能含多个数字，
+    故收集所有整数取最大值（当前鸡腿数远大于单次消耗 50 与误识碎片）。
+
+    None 有两种含义：img 为 None，或 OCR 把同一个数字拆成了横向重叠的多个文本块
+    （实测出现过 '45139/50' 被拆成 '4513' + '139/50'）——此时取最大值会丢掉末位
+    （4513），据此判体力不足会误停，故宁可返回 None 让调用方跳过本轮判定。
     """
     if img is None:
         return None
     x1, y1, x2, y2 = scale_region(STAMINA_REGION)
     crop = img.crop((x1, y1, x2, y2))
     # 区域原图仅约150×43px，数字小，且有渐变背景/金色文字，
-    # OCR 易把数字拆成多块（如 45219 拆成 4521 + 9），导致识别位数不足。
-    # 灰度二值化后变成纯黑底白字，OCR 可正确识别完整数字（实测置信度1.00）。
+    # OCR 易把数字拆成多块（如 45139 拆成 4513 + 139），导致识别位数不足。
+    # 先增强对比度（2倍），再灰度二值化变成纯黑底白字，
+    # OCR 可稳定识别完整数字（实测置信度1.00，避免固定阈值128的"坏点"问题）。
+    crop = ImageEnhance.Contrast(crop).enhance(2.0)
     crop = crop.convert('L')
     crop = crop.point(lambda x: 255 if x >= 128 else 0)
     # 放大 3 倍后再识别可显著降低误读率
     crop = crop.resize((crop.width * 3, crop.height * 3), Image.LANCZOS)
     reader = get_ocr_reader()
     result = reader.readtext(np.array(crop))
-    best = None
+
+    blocks = []   # (x_min, x_max, text)
     for item in result:
         if len(item) < 3:
             continue
-        text = item[1]
-        # 同一文本块可能含多个数字（如 '53263/50'），逐块取最大值
+        bbox, text, confidence = item[0], item[1], item[2]
+        if not re.search(r"\d", text):
+            continue
+        xs = [p[0] for p in bbox]
+        blocks.append((min(xs), max(xs), text))
+
+    # 文本块横向明显重叠 = 同一个数字被拆成多块，取最大值会丢位，判定结果不可信
+    for i in range(len(blocks)):
+        for j in range(i + 1, len(blocks)):
+            a, b = blocks[i], blocks[j]
+            overlap = min(a[1], b[1]) - max(a[0], b[0])
+            if overlap > 0.2 * min(a[1] - a[0], b[1] - b[0]):
+                return None
+
+    best = None
+    for _, _, text in blocks:
+        # 同一文本块可能含多个数字（如 '45139/50'），逐块取最大值
         for m in re.finditer(r"\d+", text):
             try:
                 val = int(m.group().replace(",", ""))

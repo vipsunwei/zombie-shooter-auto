@@ -83,3 +83,47 @@ def test_stamina_recheck_none_inconclusive(monkeypatch):
     recheck = _patch_reads(monkeypatch, [4436, None])
     low, val = states.stamina_below_confirmed(None, 44000, recheck)
     assert low is False and val == 4436
+
+
+# ============================================================
+#  get_stamina（拆块检测：宁可返回 None 也不返回缺位的低值）
+# ============================================================
+
+def _fake_reader(blocks):
+    """构造假的 OCR 阅读器：blocks = [(x_min, x_max, text), ...]"""
+    class _Reader:
+        def readtext(self, img, detail=1):
+            result = []
+            for x_min, x_max, text in blocks:
+                bbox = [(x_min, 0), (x_max, 0), (x_max, 10), (x_min, 10)]
+                result.append((bbox, text, 0.99))
+            return result
+    return _Reader()
+
+
+def _blank_img():
+    from PIL import Image
+    return Image.new("RGB", (1080, 1920), (0, 0, 0))
+
+
+def test_get_stamina_single_block(monkeypatch):
+    # 正常识别为单个文本块 '45139/50' → 取最大值 45139
+    monkeypatch.setattr(states, "get_ocr_reader", lambda: _fake_reader([(0, 100, "45139/50")]))
+    assert states.get_stamina(_blank_img()) == 45139
+
+
+def test_get_stamina_split_blocks_returns_none(monkeypatch):
+    # 实测故障：'45139/50' 被拆成横向重叠的 '4513' 与 '139/50'，
+    # 取最大值会得到缺位的 4513 → 必须判定不可信，返回 None
+    monkeypatch.setattr(
+        states, "get_ocr_reader",
+        lambda: _fake_reader([(25, 229, "4513"), (169, 441, "139/50")]))
+    assert states.get_stamina(_blank_img()) is None
+
+
+def test_get_stamina_adjacent_no_overlap(monkeypatch):
+    # 两个不重叠的文本块（如数字与其右侧独立文字）不应被误判为拆分
+    monkeypatch.setattr(
+        states, "get_ocr_reader",
+        lambda: _fake_reader([(0, 50, "45139"), (300, 380, "50")]))
+    assert states.get_stamina(_blank_img()) == 45139
