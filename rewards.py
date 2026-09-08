@@ -15,7 +15,6 @@ from config import *
 import device
 import vision
 import states
-import popups
 
 
 def get_today_remaining_count():
@@ -78,7 +77,11 @@ def click_next_level():
 
 
 def claim_all_chests(img):
-    """一键领取所有未领取的通关宝箱（点最右边发光宝箱），返回 True=点击了宝箱"""
+    """一键领取所有未领取的通关宝箱（点最右边发光宝箱），返回 True=点击了宝箱。
+
+    只点【发光】的宝箱——发光即代表"已达成且未领取"，精准命中，一次点击解决。
+    不做按文字位置的无谓点击：未通关的宝箱点了是空操作，还会弹出"奖励预览"面板干扰界面。
+    """
     glowing = states.get_glowing_chests(img)
     if not glowing:
         print(f"    → 没有发光的宝箱，无需领取")
@@ -91,7 +94,12 @@ def claim_all_chests(img):
     time.sleep(1.5)
     for wait_idx in range(5):
         img_reward = device.screenshot()
-        if img_reward is not None and states.is_reward_popup(img_reward):
+        if img_reward is None:
+            time.sleep(0.5)
+            continue
+        # has_text 读的是 OCR 缓存：必须先对新截图做 OCR 刷新，否则判定用的是旧缓存
+        vision.ocr_screenshot(img_reward)
+        if states.is_reward_popup(img_reward):
             print(f"    → 检测到奖励展示界面，点击关闭（第{wait_idx + 1}次）")
             device.close_with_verify(REWARD_POPUP_CLOSE_BTN, states.is_reward_popup, "奖励展示")
             break
@@ -102,24 +110,7 @@ def claim_all_chests(img):
 
 
 def do_victory():
-    """通关流程：先领完美通关宝箱，再判断双倍奖励，最后点返回"""
-    print(f"    → 在下半部分检测完美通关宝箱...")
-    perfect_pos = states.is_claimable_chest("完美通关")
-    if perfect_pos:
-        print(f"    → 识别到完美通关文字，宝箱位置 {perfect_pos}，点击领取")
-        device.tap(perfect_pos)
-        time.sleep(2)
-        img = device.screenshot()
-        if img is not None:
-            vision.ocr_screenshot(img)
-            if states.is_reward_popup(img):
-                print(f"    → 检测到奖励展示界面 → 关闭")
-                popups.close_reward_popup()
-            else:
-                print(f"    → 未弹出奖励界面（可能已领取）")
-    else:
-        print(f"    → 未在下半部分识别到完美通关文字（可能已领取或OCR未识别）")
-
+    """通关流程：判断双倍奖励，最后点返回（宝箱在选关页由 claim_all_chests 领取）"""
     should_double = should_click_double_reward()
     if should_double:
         double_reward_pos = vision.find_text("双倍奖励", min_confidence=0.3)
