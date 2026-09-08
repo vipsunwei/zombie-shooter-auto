@@ -23,6 +23,15 @@ _save_*.py
 _screenshot_*.png
 _screen_*.png
 
+# 运行日志
+skill_picks.log
+run.log
+run.err
+.logs/
+
+# 运行时技能配置（由 skill_config.py 复制生成，运行期被程序改写，不进版本库）
+skill_runtime.py
+
 # Python缓存
 __pycache__/
 *.pyc

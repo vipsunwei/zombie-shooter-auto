@@ -19,7 +19,10 @@ python -m pytest tests/test_vision.py -q
 
 > 💡 测试在内存中注入假 OCR 结果或合成图片，无需连接模拟器，可在任何环境快速验证重构是否破坏既有行为。
 
-## 🔥 热更新启动（开发用）
+## 🔥 热更新启动（开发用 · ⚠️ 已弃用）
+
+> ⚠️ **已弃用**：现阶段不再需要热更新，直接 `python auto_play.py` 运行即可（参数见下方 CLI 章节）。
+> 以下 `launcher.py` 内容仅作历史参考保留，不再维护。
 
 `launcher.py` 监控整个项目目录下的 `.py` 文件（不含自身），代码一改动就自动重启主脚本，方便开发调试。
 
@@ -157,7 +160,7 @@ zombie-shooter-auto/
 ├── skills.py                 # 词条配置热加载与智能选择
 ├── rewards.py                # 奖励/宝箱/胜利结算/关卡切换
 ├── skill_config.py           # 词条优先级配置文件（可选，缺失时降级随机）
-├── launcher.py               # 热更新启动器（监控整目录 .py 自动重启）
+├── launcher.py               # ⚠️ 已弃用：热更新启动器（监控整目录 .py 自动重启），现直接运行 auto_play.py
 ├── tools/                    # 发布工具
 │   ├── release.py            #   一键发布脚本（含 --dry-run 预览模式）
 │   ├── generate_changelog.py #   changelog 自动生成脚本（基于 git commit）
