@@ -9,6 +9,29 @@
 
 （暂无变更）
 
+## [2.1.0] - 2026-09-08
+
+### ✨ 新增
+
+- 新增酒馆招募模式 (8c47b45)
+
+### 🔧 重构
+
+- skill_config 作只读基线,运行时生成 skill_runtime 并支持失败流派切换 (bb974a2)
+- 主循环改表驱动分派,强化界面判定与战斗波次检测 (62b8459)
+
+### 📝 文档
+
+- 更新维护说明与 .gitignore (8950ecc)
+
+### ✅ 测试
+
+- 补充技能选择单测 (78563cb)
+
+### 🔨 构建
+
+- 删除 launcher,清理 do_victory 结算页找宝箱死代码 (056bc85)
+
 ## [2.0.3] - 2026-09-07
 
 ### 🐛 修复
@@ -185,7 +208,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.0.3...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.1.0
 [2.0.3]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.3
 [2.0.2]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.2
 [2.0.1]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.1
