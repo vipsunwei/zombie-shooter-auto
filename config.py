@@ -25,11 +25,20 @@ SKILL_STRATEGY = "random"   # 运行时可能被 load_skill_config 覆盖
 BATTLE_LOOP_INTERVAL = 3.0  # 游戏循环中每次检测间隔（秒）
 CHECK_INTERVAL = 0.8        # 非游戏循环中每次检测间隔（秒）
 CLEAN_SCREENSHOT_PER_LEVEL = True  # 每关通关后清理截图
+# 调试开关：通关清截图后是否自动停止脚本。
+#   False = 默认（正式/自动闯关）：打完一关继续打下一关，不中断（无人值守自动跑用）。
+#   True  = 调试模式（人看）：每打完一关自动停（停在选关界面），便于「分析日志→改词条优先级→重跑」循环。
+#   默认 False；需要人看停顿时用命令行 --debug 显式开启。
+DEBUG_STOP_AFTER_CLEAR = False
 WAVE_WHITE_THRESHOLD = 3.5  # 波次区白色像素占比阈值（判定是否在战斗中）
 
 # 截图临时文件（模拟器内 + 本地）
 SCREENSHOT_REMOTE = "/sdcard/auto_play.png"
 SCREENSHOT_LOCAL = os.path.join(BASE_DIR, "_current_screen.png")
+
+# 选卡记录日志（复盘用：每局点了哪些词条、各点了几次）
+# 统一放到 .logs/ 运行日志目录，避免污染项目根目录（.logs/ 已被 gitignore 忽略）
+SKILL_PICK_LOG = os.path.join(BASE_DIR, ".logs", "skill_picks.log")
 
 # ============================================================
 #  坐标配置（基准分辨率 1080×1920，运行时自动按实际分辨率缩放）
@@ -78,10 +87,14 @@ QUICK_PATROL_BTN_REGION = (150, 1400, 450, 1550)   # 巡逻车弹窗内"快速�
 PATROL_CLAIM_REGION = (300, 1100, 800, 1600)       # 巡逻车弹窗内"领取"按钮大致区域，实机校准时可微调
 PATROL_TIME_REGION = (455, 815, 625, 870)          # 巡逻车弹窗内正计时文本区域（实测1080x1920：文本中心约(540,842)）
 PATROL_TIME_FULL_REGION = (380, 800, 700, 880)     # 巡逻车弹窗内「已达到最大巡逻时间！」区域（满时间时不显示HH:MM:SS，改显示该文案；实测文本x=414~651,y=822~854）
-STAMINA_REGION = (675, 65, 825, 108)              # 顶部体力(鸡腿)数量区域（实测1080x1920：文本如 57258/50，中心约(750,86)）
+STAMINA_REGION = (650, 60, 830, 112)              # 顶部体力(鸡腿)数量区域（放宽边距，避免 HUD 漂移裁掉首位数字致 get_stamina 误判 None；实机1080x1920：文本如 16963/50）
 STAMINA_PER_PATROL = 50                           # 一次快速巡逻消耗的鸡腿(体力)数量
-OUT_OF_STAMINA_EXIT = 10                          # 体力不足时 auto_play 退出码，launcher 据此停止而非重启
-BAG_FULL_EXIT = 11                                # 背包已满时 auto_play 退出码，launcher 据此停止而非重启
+OUT_OF_STAMINA_EXIT = 10                          # 体力(鸡腿)不足时退出码（主循环 _on_level_select 据此停止自动闯关）
+BAG_FULL_EXIT = 11                                # 背包已满时退出码（主循环据此停止自动闯关）
+# 历史常量：原「挑战失败」后「再来一次」硬上限（超过则 sys.exit 停止脚本）。
+# 现改为「失败→调优→重打」无限循环（由主循环体力(鸡腿)不足兜底退出），此值不再作停止条件，
+# 仅保留作预留 / 日志参考。见 handlers._on_defeat。
+MAX_DEFEAT_RETRY = 3
 STOP_STAMINA_THRESHOLD = STAMINA_PER_PATROL      # 鸡腿(体力)低于此值即停止脚本；可被启动参数 --min-stamina/-s 覆盖，默认同一次巡逻消耗
 
 SELECTED_BRIGHTNESS_THRESHOLD = 650  # 选中状态亮度阈值（选中>650，未选中<620）
@@ -104,6 +117,7 @@ CHEST_CLICK_POSITIONS = {
 #  检测区域配置（基准 1080×1920，使用处经 scale_region 自动缩放）
 # ============================================================
 BATTLE_WAVE_REGION = (600, 0, 1080, 120)             # 战斗第0级：波次标题 OCR 区
+LEVEL_LABEL_REGION = (0, 15, 1080, 120)              # 战斗顶部关卡标签 OCR 区（如 "127.球场空地"），进入战斗时记录关卡用
 BATTLE_SKILL_REGION = (0, 400, 1080, 750)            # 战斗第1级：选择技能+词条区
 BATTLE_ELITE_REGION = (430, 1270, 650, 1400)         # 战斗第2级：精英掉落区
 BATTLE_RETURN_CHECK_REGION = (100, 1650, 980, 1750)  # 战斗第3级：返回按钮检测区
@@ -181,6 +195,7 @@ __all__ = [
     "WAVE_WHITE_THRESHOLD",
     "SCREENSHOT_REMOTE",
     "SCREENSHOT_LOCAL",
+    "SKILL_PICK_LOG",
     "CARD_LEFT",
     "CARD_MIDDLE",
     "CARD_RIGHT",

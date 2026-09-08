@@ -54,6 +54,9 @@ def parse_args():
   battle       循环闯关（默认）
   patrol       快速巡逻
 
+调试模式 (--debug, -d):
+  开启后通关即停（人看时用，便于分析调优）；默认关闭（自动跑不中断）
+
 鸡腿停止阈值 (--min-stamina, -s):
   <数量>       自定义鸡腿不足停止线，例如 -s 80 表示剩 80 鸡腿即停（默认 50）
 
@@ -115,8 +118,12 @@ def parse_args():
         elif arg.startswith("-s="):
             config.STOP_STAMINA_THRESHOLD = _validate_stamina(arg.split("=", 1)[1])
             stamina_provided = True
+        elif arg.startswith("--debug"):
+            config.DEBUG_STOP_AFTER_CLEAR = True
+        elif arg in ("-d", "--debug"):
+            config.DEBUG_STOP_AFTER_CLEAR = True
         elif arg.startswith("-"):
-            print(f"❌ 未知参数: {arg}（仅支持 --emulator/-e / --mode/-m / --min-stamina/-s）")
+            print(f"❌ 未知参数: {arg}（仅支持 --emulator/-e / --mode/-m / --min-stamina/-s / --debug）")
             sys.exit(1)
         else:
             print(f"❌ 不支持位置参数: {arg}（请使用 --emulator/-e / --mode/-m / --min-stamina/-s）")
