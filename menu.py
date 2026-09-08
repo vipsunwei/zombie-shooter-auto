@@ -76,6 +76,7 @@ def select_mode_interactive():
     options = [
         ("battle", "闯关（默认）"),
         ("patrol", "巡逻车（快速巡逻）"),
+        ("recruit", "招募（酒馆十连）"),
     ]
     return _arrow_select("请选择运行模式", options, default_index=0)
 

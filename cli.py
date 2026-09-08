@@ -53,6 +53,7 @@ def parse_args():
 运行模式 (--mode, -m):
   battle       循环闯关（默认）
   patrol       快速巡逻
+  recruit      招募（酒馆十连）
 
 调试模式 (--debug, -d):
   开启后通关即停（人看时用，便于分析调优）；默认关闭（自动跑不中断）
@@ -135,7 +136,8 @@ def parse_args():
         emulator = menu.select_emulator_interactive()
     if not mode_provided:
         config.MODE = menu.select_mode_interactive()
-    if not stamina_provided:
+    # 鸡腿阈值仅战斗/巡逻模式需要；招募模式不涉及体力消耗，跳过该菜单
+    if not stamina_provided and config.MODE in ("battle", "patrol"):
         config.STOP_STAMINA_THRESHOLD = menu.prompt_stamina_interactive()
     return emulator
 
@@ -143,8 +145,8 @@ def parse_args():
 def _validate_mode(mode):
     """校验运行模式参数，返回小写模式名；非法则报错退出"""
     mode = mode.lower()
-    if mode not in ("battle", "patrol"):
-        print(f"❌ 未知模式: {mode}（仅支持 battle / patrol）")
+    if mode not in ("battle", "patrol", "recruit"):
+        print(f"❌ 未知模式: {mode}（仅支持 battle / patrol / recruit）")
         sys.exit(1)
     return mode
 

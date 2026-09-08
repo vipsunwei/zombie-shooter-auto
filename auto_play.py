@@ -21,6 +21,7 @@ import device
 import vision
 import states
 import patrol
+import recruit
 import cli
 from handlers import (
     BATTLE_HANDLERS,
@@ -87,7 +88,8 @@ def main():
     if config.SKILL_STRATEGY == "priority":
         strategy_display = f"priority（已配置{len(config.SKILL_PRIORITIES)}个词条）"
     print(f"  策略 : 技能选 {strategy_display}")
-    print(f"  鸡腿停止阈值: {config.STOP_STAMINA_THRESHOLD}")
+    if config.MODE in ("battle", "patrol"):
+        print(f"  鸡腿停止阈值: {config.STOP_STAMINA_THRESHOLD}")
     print("  停止 : Ctrl+C")
     print("-" * 55)
 
@@ -117,6 +119,14 @@ def main():
         except patrol.BagFull:
             print("🎒 背包已满，停止脚本")
             sys.exit(config.BAG_FULL_EXIT)
+        return
+
+    if config.MODE == "recruit":
+        print("🏠 进入招募模式（酒馆十连）")
+        try:
+            recruit.run_recruit()
+        except KeyboardInterrupt:
+            print("🛑 招募模式已停止（Ctrl+C）")
         return
 
     ctx = LoopContext()
