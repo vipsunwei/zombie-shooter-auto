@@ -23,30 +23,79 @@ _PATROL_CLAIMABLE_RE = re.compile(
 )
 
 
+def _stamina_from_ocr(ocr_items):
+    """从 OCR 结果里找 '当前/单次' 形式的体力，返回当前值(int)或 None。
+
+    兼容两种元素结构：全局缓存 [bbox, text, conf] 与内部裁剪块 (x_min, x_max, text)。
+    """
+    if not ocr_items:
+        return None
+    texts = []
+    for it in ocr_items:
+        if isinstance(it, (list, tuple)) and len(it) >= 3 and isinstance(it[2], str):
+            texts.append(it[2])
+        elif isinstance(it, (list, tuple)) and len(it) >= 2 and isinstance(it[1], str):
+            texts.append(it[1])
+    # 优先匹配 '当前/单次' 形式（如 16963/50），分子即当前鸡腿数
+    for text in texts:
+        m = re.search(r"(\d{2,})/(\d{1,3})", text)
+        if m:
+            try:
+                return int(m.group(1))
+            except ValueError:
+                continue
+    return None
+
+
+def _merge_overlapping_blocks(blocks):
+    """把横向重叠/紧邻的数字文本块按 x 顺序合并，避免 '16963/50' 被拆成
+    '6963/50' + '16' 后取最大值丢首位。返回 [(x_min, x_max, text), ...]。"""
+    if not blocks:
+        return []
+    ordered = sorted(blocks, key=lambda b: b[0])
+    merged = [list(ordered[0])]
+    for b in ordered[1:]:
+        last = merged[-1]
+        last_w = max(last[1] - last[0], 1)
+        # 与上一块重叠，或间隔小于上一块宽度的 30% → 视为同一数字合并
+        if b[0] <= last[1] + 0.3 * last_w:
+            if b[0] >= last[0]:
+                last[2] = last[2] + b[2]
+            else:
+                last[2] = b[2] + last[2]
+            last[0] = min(last[0], b[0])
+            last[1] = max(last[1], b[1])
+        else:
+            merged.append(list(b))
+    return [tuple(m) for m in merged]
+
+
 def get_stamina(img):
     """读取顶部体力(鸡腿)数量，返回 int 或 None。
 
-    对顶部体力区域(STAMINA_REGION)独立裁剪 OCR，不依赖全局 OCR 缓存，
-    因此在战斗循环(ocr_battle_loop 裁剪区域)中也能可靠识别。
-    区域文本形如 '45139/50'（当前/单次消耗）。同一文本块可能含多个数字，
-    故收集所有整数取最大值（当前鸡腿数远大于单次消耗 50 与误识碎片）。
-
-    None 有两种含义：img 为 None，或 OCR 把同一个数字拆成了横向重叠的多个文本块
-    （实测出现过 '45139/50' 被拆成 '4513' + '139/50'）——此时取最大值会丢掉末位
-    （4513），据此判体力不足会误停，故宁可返回 None 让调用方跳过本轮判定。
+    优先从全局 OCR 缓存(config._current_ocr_result)里找 '当前/单次' 形式
+    （如 '16963/50'）取分子，对顶部体力显示区域漂移免疫（游戏更新挪动 HUD
+    后裁剪区易裁掉首位数字导致误判为 None，进而让巡逻背包满兜底与战斗体力不足
+    停止同时失效）。缓存缺失时（战斗循环内全局缓存只含技能/波次区域，未必含
+    体力）再裁剪 STAMINA_REGION 独立 OCR 兜底。
     """
     if img is None:
         return None
+
+    # 1) 全局 OCR 缓存优先：直接用全屏 OCR 结果，避开裁剪区漂移/数字拆块
+    cached = getattr(config, "_current_ocr_result", None)
+    val = _stamina_from_ocr(cached) if cached else None
+    if val is not None:
+        return val
+
+    # 2) 兜底：裁剪 STAMINA_REGION 独立 OCR（增强对比 + 放大）
     x1, y1, x2, y2 = scale_region(STAMINA_REGION)
     crop = img.crop((x1, y1, x2, y2))
-    # 区域原图仅约150×43px，数字小，且有渐变背景/金色文字，
-    # OCR 易把数字拆成多块（如 45139 拆成 4513 + 139），导致识别位数不足。
     # 先增强对比度（2倍），再灰度二值化变成纯黑底白字，
-    # OCR 可稳定识别完整数字（实测置信度1.00，避免固定阈值128的"坏点"问题）。
+    # 放大 3 倍后再识别可显著降低误读率
     crop = ImageEnhance.Contrast(crop).enhance(2.0)
     crop = crop.convert('L')
     crop = crop.point(lambda x: 255 if x >= 128 else 0)
-    # 放大 3 倍后再识别可显著降低误读率
     crop = crop.resize((crop.width * 3, crop.height * 3), Image.LANCZOS)
     reader = get_ocr_reader()
     result = reader.readtext(np.array(crop))
@@ -61,25 +110,9 @@ def get_stamina(img):
         xs = [p[0] for p in bbox]
         blocks.append((min(xs), max(xs), text))
 
-    # 文本块横向明显重叠 = 同一个数字被拆成多块，取最大值会丢位，判定结果不可信
-    for i in range(len(blocks)):
-        for j in range(i + 1, len(blocks)):
-            a, b = blocks[i], blocks[j]
-            overlap = min(a[1], b[1]) - max(a[0], b[0])
-            if overlap > 0.2 * min(a[1] - a[0], b[1] - b[0]):
-                return None
-
-    best = None
-    for _, _, text in blocks:
-        # 同一文本块可能含多个数字（如 '45139/50'），逐块取最大值
-        for m in re.finditer(r"\d+", text):
-            try:
-                val = int(m.group().replace(",", ""))
-            except ValueError:
-                continue
-            if best is None or val > best:
-                best = val
-    return best
+    # 文本块横向重叠 = 同一个数字被拆块：合并后再解析（不再直接判 None）
+    merged = _merge_overlapping_blocks(blocks)
+    return _stamina_from_ocr(merged)
 
 
 def stamina_below_confirmed(img, threshold, recheck_fn, retries=2):
@@ -119,22 +152,92 @@ def is_elite_drop(img):
 
 
 def is_victory_settlement(img):
-    """通关结算界面：满足2个以上特征即认为是结算页面
-    特征：标签栏（伤害统计/问题上报/奖励总览）、返回按钮、恭喜获得
+    """通关结算界面：必须同时满足「不在战斗中」+「非失败页」+「出现结算专属标签栏」。
+
+    ⚠️ 关键修复：战斗中底部本就有「返回」导航键、还常弹「恭喜获得」奖励窗，
+    旧逻辑只要命中 2/3 特征就判胜利，导致战斗中误判通关→点返回→退回选关→重打同一关。
+    真正的结算页专属特征是底部标签栏（伤害统计/问题上报/奖励总览），战斗中绝不会出现；
+    且结算时早已不在战斗（无波次）。两者同时约束即可彻底排除误判。
+
+    另外失败页同样带「标签栏+返回」，故必须以 is_defeat 显式排除——否则 OCR 漏识
+    「挑战失败」时，失败结算页会被错判为胜利（127 实战已踩坑）。
     """
+    if is_battling(img):
+        return False
+    if is_defeat(img):
+        return False
     tabs_region = (50, 1400, 1030, 1560)
     has_tabs = (has_text("伤害统计", region=tabs_region, min_confidence=0.3) or
                 has_text("问题上报", region=tabs_region, min_confidence=0.3) or
                 has_text("奖励总览", region=tabs_region, min_confidence=0.2) or
                 has_text("奖励总笕", region=tabs_region, min_confidence=0.2))
+    if not has_tabs:
+        return False
     has_return = has_text("返回", region=(500, 1600, 1030, 1800), min_confidence=0.5)
-    has_congrats = has_text("恭喜获得", region=(300, 350, 780, 500), min_confidence=0.5)
-    return sum([has_tabs, has_return, has_congrats]) >= 2
+    if not has_return:
+        return False
+    # 胜利专属正向文字（子串匹配，覆盖「通关结算/成功通关/完美通关/胜利/恭喜获得」）。
+    # 失败页已被 is_defeat 排除，此处再要求胜利正向文字，确保不是其它未知结算页被误当胜利。
+    victory_text = (has_text("通关", min_confidence=0.3) or
+                    has_text("胜利", min_confidence=0.3) or
+                    has_text("恭喜获得", region=(300, 350, 780, 500), min_confidence=0.5))
+    return bool(victory_text)
 
 
 def is_victory(img):
-    """通关界面：检测"完美通关"文字（位置在屏幕上方）"""
+    """通关界面：检测"完美通关"文字（位置在屏幕上方）。结算时早已不在战斗。"""
+    if is_battling(img):
+        return False
     return has_text("完美通关", region=(300, 150, 780, 350))
+
+
+def is_defeat(img):
+    """战斗失败结算界面：检测专属字样「挑战失败」或「再来一次」（区别于「重连失败」弹窗）。
+
+    失败页含「挑战失败 / 再来一次 / 返回」，与胜利页同样带「返回」+「恭喜获得」奖励弹窗，
+    若不加此判定会被 is_victory_settlement 误判为胜利 → 点返回 → 重打同一关 → 死循环。
+
+    ⚠️ 实战教训（重要）：127 这种硬仗结算页，「挑战失败」字体艺术化、OCR 常整词误读
+    （如「挑载失败」「挑战失则」），用整词匹配会漏识 → 整页被误判为胜利（已踩坑多次）。
+    故改用【子串匹配】：
+      - "失败"：只要误读后"失败"两字还在即可兜底（"挑载失败"含"失败"→命中）；
+      - "挑战"：覆盖"挑战失败/挑战失则"等变体；
+      - "再来一次"：失败页专属按钮，几乎不可能误读，作为强信号。
+    三者任一命中即判失败，优先级高于胜利判定。
+    """
+    # 标题区 y≈258：「挑战失败」实测中心 @(539,262)，旧 regional (y从280起) 差 18px 导致整段漏检，
+    # 多年误判根源就在这，故文本框顶放宽到 y=200 覆盖标题带。
+    if has_text("失败", region=(80, 200, 1000, 1050), min_confidence=0.3):
+        return True
+    if has_text("挑战", region=(80, 200, 1000, 1050), min_confidence=0.3):
+        return True
+    # 「再来一次」是失败页专属按钮，实测 @(326,1695)，与「双倍奖励」互斥（通关页该位置是双倍奖励）。
+    # 旧 region=(600,1100) 根本覆盖不到 y=1695，这条检查是死的，现按实测按钮行修正。
+    if has_text("再来一次", region=(150, 1600, 520, 1790), min_confidence=0.3):
+        return True
+    return False
+
+
+def get_level_label(img=None):
+    """战斗中 OCR 顶部关卡标签，返回如 '127.球场空地'；识别失败返回 None。
+
+    仅在进入战斗时调用一次用于分析记录；独立裁剪顶部区域，不依赖全局 OCR 缓存。
+    """
+    if img is None:
+        return None
+    if not isinstance(img, Image.Image):
+        img = Image.fromarray(img)
+    x1, y1, x2, y2 = scale_region(config.LEVEL_LABEL_REGION)
+    cropped = img.crop((x1, y1, x2, y2))
+    try:
+        res = get_ocr_reader().readtext(np.array(cropped))
+    except Exception:
+        return None
+    for b, t, c in res:
+        s = t.strip()
+        if re.search(r'^\d+\.', s) or '球场' in s or '关' in s:
+            return s
+    return None
 
 
 def is_perfect_clear(img=None):
@@ -173,7 +276,7 @@ def is_claimable_chest(chest_name):
     chest_name: "成功通关" / "50%血量通关" / "完美通关"
     返回: (x, y) 宝箱位置，未找到返回 None
     """
-    pos = get_text_position(chest_name, region=(50, 1300, 1050, 1550), min_confidence=0.2)
+    pos = get_text_position(chest_name, region=(50, 900, 1050, 1750), min_confidence=0.2)
     if pos is None:
         return None
     return (pos[0], pos[1] - 80)

@@ -179,3 +179,6 @@ def run_quick_patrol(max_loops=None):
             time.sleep(2)
     except KeyboardInterrupt:
         print(f"\n[{_ts()}] 🛑 快速巡逻模式已停止（Ctrl+C），共处理 {loop_cnt} 次弹窗")
+    finally:
+        # 巡逻模式没有"每关清理"的时机，统一在退出时清理模拟器内与本地的截图
+        device.clean_screenshots()

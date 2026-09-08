@@ -11,6 +11,7 @@
 import time
 import os
 import sys
+import datetime
 
 from version import __version__
 
@@ -31,11 +32,49 @@ from handlers import (
 )
 
 
+class _Tee:
+    """把写入同时转发到多个流（用于终端 + 日志文件双写）。"""
+    def __init__(self, *streams):
+        self._streams = streams
+    def write(self, data):
+        for s in self._streams:
+            try:
+                s.write(data)
+            except Exception:
+                pass
+        self.flush()
+    def flush(self):
+        for s in self._streams:
+            try:
+                s.flush()
+            except Exception:
+                pass
+    def __getattr__(self, name):
+        # 透传 encoding/buffer 等属性到首个原始流，避免破坏子流程
+        return getattr(self._streams[0], name)
+
+
+def setup_logging():
+    """将 stdout/stderr 同时写入 .logs/auto_play_YYYY-MM-DD.log，便于事后排查。
+
+    每天一个文件、追加写；不改动任何现有 print 调用，所有模块
+    （auto_play / patrol / states / handlers 的 print）自动落盘。
+    """
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, f"auto_play_{datetime.date.today():%Y-%m-%d}.log")
+    f = open(log_path, "a", encoding="utf-8")
+    sys.stdout = _Tee(sys.stdout, f)
+    sys.stderr = _Tee(sys.stderr, f)
+    print(f"[日志] 本次输出已同步写入: {log_path}")
+
+
 # ============================================================
 #  主循环（流程编排）
 # ============================================================
 
 def main():
+    setup_logging()
     config.EMULATOR_TYPE = cli.parse_args()
     emulator_display = {"mumu": "MuMu", "ldplayer": "雷电", "auto": "自动检测"}.get(
         config.EMULATOR_TYPE, config.EMULATOR_TYPE)
@@ -109,6 +148,11 @@ def main():
                         states.is_elite_drop(img) or states.is_battling(img)):
                     config.in_battle_loop = True
                     _log("🔄 检测到游戏循环界面，自动切换到游戏循环中")
+                    # 记录进入的关卡（用于分析）；覆盖「脚本启动即已在战斗」的情况
+                    level_label = states.get_level_label(img)
+                    if level_label:
+                        ctx.current_level = level_label
+                        _log(f"🎯 进入战斗关卡: {level_label}")
 
             if config.in_battle_loop:
                 # 战斗加载阶段(just_started 起 3 秒内)豁免"未检测波次跳出"；
@@ -145,11 +189,8 @@ def main():
         traceback.print_exc()
         sys.exit(1)  # 非0退出码：交给启动器按契约判定为「崩溃→重启」
     finally:
-        if os.path.exists(SCREENSHOT_LOCAL):
-            try:
-                os.remove(SCREENSHOT_LOCAL)
-            except Exception:
-                pass
+        # 同时清理模拟器内与本地截图（原先只删本地，模拟器内的会一直留着）
+        device.clean_screenshots()
 
 
 if __name__ == "__main__":

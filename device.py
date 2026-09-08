@@ -298,7 +298,11 @@ def screenshot():
     run_adb(f'pull {SCREENSHOT_REMOTE} "{SCREENSHOT_LOCAL}"')
     if os.path.exists(SCREENSHOT_LOCAL):
         try:
-            return Image.open(SCREENSHOT_LOCAL)
+            img = Image.open(SCREENSHOT_LOCAL)
+            # 立即读入内存并释放文件句柄：否则 Windows 下句柄被占用，
+            # clean_screenshots() 里的 os.remove 会失败（且被 except 静默吞掉）
+            img.load()
+            return img
         except Exception:
             return None
     return None

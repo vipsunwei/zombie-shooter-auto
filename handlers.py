@@ -44,6 +44,8 @@ class LoopContext:
         self.unknown_cnt = 0
         self.just_started = False
         self.just_start_time = 0.0
+        self.current_level = None   # 当前战斗关卡标签（进入战斗时 OCR 记录，用于分析）
+        self.defeat_cnt = 0         # 本次运行累计「挑战失败」次数
 
 
 def _log(msg):
@@ -91,13 +93,55 @@ def _on_auto_close_popup(ctx, img):
 def _on_victory_settlement(ctx, img):
     ctx.level_cnt += 1
     config.in_battle_loop = False
-    _log(f"🏆 第 {ctx.level_cnt} 关通关！→ 点击返回，跳出游戏循环")
+    level_tag = ctx.current_level if ctx.current_level else f"第{ctx.level_cnt}"
+    _log(f"🏆 {level_tag} 关通关！→ 点击返回，跳出游戏循环")
     rewards.do_victory()
     if CLEAN_SCREENSHOT_PER_LEVEL:
         device.clean_screenshots()
         _log("🧹 已清理本关截图")
     ctx.unknown_cnt = 0
+    # 通关→恢复默认子弹流配置 + 清空本局已选，进入下一关时从干净基线重新构建
+    skills.reset_skill_to_default()
+    if getattr(config, "DEBUG_STOP_AFTER_CLEAR", False):
+        _log("⏹ [DEBUG] 通关清截图后自动停止脚本（游戏停在选关界面，便于分析日志/调整词条优先级）")
+        sys.exit(0)
     return "通关结算"
+
+
+def _on_defeat(ctx, img):
+    """战斗失败结算界面（「挑战失败 / 再来一次 / 返回」）。
+
+    失败→按调优逻辑整组切换流派（改写 skill_config.py，下一局选牌自动重载生效），
+    然后点「再来一次」重试同一关（重摇技能），如此循环直到通关。
+    不硬性停止：自动跑场景下由主循环的「体力(鸡腿)不足」判定兜底退出，不会无限空耗；
+    用户也可随时 Ctrl+C 中断。
+    """
+    ctx.defeat_cnt += 1
+    level_tag = ctx.current_level if ctx.current_level else "未知"
+    _log(f"❌ {level_tag} 关 挑战失败！（本次运行第 {ctx.defeat_cnt} 次）")
+    # 失败→调优：整组切换下一流派（写回 skill_config.py，下一局热生效），然后继续打
+    skills.rotate_skill_on_defeat()
+    config.in_battle_loop = False
+    retry_pos = vision.get_text_position(
+        "再来一次", region=(200, 700, 880, 1000), min_confidence=0.5)
+    if retry_pos:
+        _log(f"    ↻ 点击「再来一次」重试（已切换流派，重摇技能构建）")
+        device.tap(retry_pos)
+        time.sleep(1.5)
+        config.in_battle_loop = True
+        ctx.just_started = True
+        ctx.just_start_time = time.time()
+        ctx.unknown_cnt = 0
+        return "挑战失败-重试"
+    # 未定位「再来一次」：点「返回」回选关，由主循环继续（不中断自动闯关）
+    _log("    ⚠ 未定位「再来一次」按钮，点「返回」回选关继续")
+    back_pos = vision.get_text_position(
+        "返回", region=(500, 1600, 1030, 1800), min_confidence=0.5)
+    if back_pos:
+        device.tap(back_pos)
+        time.sleep(1.5)
+    ctx.unknown_cnt = 0
+    return "挑战失败-无重试按钮"
 
 
 def _on_skill_select(ctx, img):
@@ -124,7 +168,14 @@ def _on_elite_drop(ctx, img):
 
 
 def _on_battle_default(ctx, img):
-    """战斗中兜底：未命中任何已知界面时，检测「返回」按钮进入结算处理"""
+    """战斗中兜底：未命中任何已知界面时，检测「返回」按钮进入结算处理。
+
+    ⚠️ 关键修复：战斗中左下角本就有「返回」导航键，若这里直接点返回会误退战斗；
+    只有确实不在战斗时，才把「返回」当作结算返回处理。
+    """
+    if states.is_battling(img):
+        ctx.unknown_cnt = 0
+        return "战斗中"
     back_pos = vision.get_text_position("返回", region=VICTORY_RETURN_REGION, min_confidence=0.5)
     if not back_pos:
         ctx.unknown_cnt = 0
@@ -137,7 +188,15 @@ def _on_battle_default(ctx, img):
             device.clean_screenshots()
             _log("🧹 已清理本关截图")
     else:
-        _log(f"↩️  未检测到通关结算界面，直接点击返回按钮 {back_pos}")
+        # ⚠️ 关键：既判不出胜利（is_victory_settlement 要求"通关/胜利/恭喜获得"字样），
+        # 也判不出失败（"挑战失败/再来一次/失败"）——127 的结算页标题是艺术字、
+        # OCR 常常整页读不出可用文字，就会出现这种"两边都不匹配"的情况。
+        # 此时【绝不能当作通关】：127 就栽在这里——失败结算页被当胜利，
+        # 日志误报"🏆 通关"、控制器错停，看着像过了其实一次都没清。
+        # 正确做法：点返回退出，【不宣称胜利】，由循环继续重打；
+        # 真正的通关要么被 is_victory_settlement 正向识别，
+        # 要么被选关界面"宝箱可领取"的像素铁证兜住。
+        _log(f"↩️  未知结算：既无通关字样也无失败字样（结算页艺术字OCR读不出），点返回退出，不判定为通关 {back_pos}")
         device.tap(back_pos)
         time.sleep(1)
     config.in_battle_loop = False
@@ -149,6 +208,7 @@ def _on_battle_default(ctx, img):
 BATTLE_HANDLERS = [
     (states.is_auto_close_popup, _on_auto_close_popup),
     (states.is_reconnect_failed_popup, _on_reconnect_failed),
+    (states.is_defeat, _on_defeat),
     (states.is_victory_settlement, _on_victory_settlement),
     (states.is_skill_select, _on_skill_select),
     (states.is_elite_drop, _on_elite_drop),
@@ -327,6 +387,9 @@ def _on_level_select(ctx, img):
         # 其余视为战斗加载/过渡画面，继续等待
     if entered_battle:
         _log("    ✅ 已确认进入战斗界面")
+        level_label = states.get_level_label(img_v)
+        ctx.current_level = level_label
+        _log(f"🎯 进入战斗关卡: {level_label if level_label else '未知（OCR未识别）'}")
     else:
         _log("    ⚠ 未在限定时间内确认进入战斗，回退到关卡选择重试")
         config.in_battle_loop = False
@@ -337,7 +400,8 @@ def _on_level_select(ctx, img):
 
 def _on_victory(ctx, img):
     ctx.level_cnt += 1
-    _log(f"🏆 第 {ctx.level_cnt} 关通关！→ 点击返回")
+    level_tag = ctx.current_level if ctx.current_level else f"第{ctx.level_cnt}"
+    _log(f"🏆 {level_tag} 关通关！→ 点击返回")
     rewards.do_victory()
     if CLEAN_SCREENSHOT_PER_LEVEL:
         device.clean_screenshots()

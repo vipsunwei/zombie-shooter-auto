@@ -180,7 +180,7 @@ def ocr_battle_loop(img):
     for item in result3:
         if len(item) >= 3:
             bbox, text, confidence = item[0], item[1], item[2]
-            adjusted_bbox = [(p[0], p[1] + REGION3_Y1) for p in bbox]
+            adjusted_bbox = [(p[0] + REGION3_X1, p[1] + REGION3_Y1) for p in bbox]
             adjusted3.append((adjusted_bbox, text, confidence))
 
     result3 = adjusted3
