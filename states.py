@@ -36,9 +36,9 @@ def _stamina_from_ocr(ocr_items):
             texts.append(it[2])
         elif isinstance(it, (list, tuple)) and len(it) >= 2 and isinstance(it[1], str):
             texts.append(it[1])
-    # 优先匹配 '当前/单次' 形式（如 16963/50），分子即当前鸡腿数
+    # 优先匹配 '当前/50' 形式（体力上限固定50，分母精确匹配避免OCR误识别）
     for text in texts:
-        m = re.search(r"(\d{2,})/(\d{1,3})", text)
+        m = re.search(r"(\d+)/50", text)
         if m:
             try:
                 return int(m.group(1))

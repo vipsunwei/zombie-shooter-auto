@@ -87,15 +87,15 @@ QUICK_PATROL_BTN_REGION = (150, 1400, 450, 1550)   # 巡逻车弹窗内"快速�
 PATROL_CLAIM_REGION = (300, 1100, 800, 1600)       # 巡逻车弹窗内"领取"按钮大致区域，实机校准时可微调
 PATROL_TIME_REGION = (455, 815, 625, 870)          # 巡逻车弹窗内正计时文本区域（实测1080x1920：文本中心约(540,842)）
 PATROL_TIME_FULL_REGION = (380, 800, 700, 880)     # 巡逻车弹窗内「已达到最大巡逻时间！」区域（满时间时不显示HH:MM:SS，改显示该文案；实测文本x=414~651,y=822~854）
-STAMINA_REGION = (650, 60, 830, 112)              # 顶部体力(鸡腿)数量区域（放宽边距，避免 HUD 漂移裁掉首位数字致 get_stamina 误判 None；实机1080x1920：文本如 16963/50）
-STAMINA_PER_PATROL = 50                           # 一次快速巡逻消耗的鸡腿(体力)数量
+STAMINA_REGION = (690, 60, 830, 112)              # 顶部体力(鸡腿)数量区域（左边界避开"+"号，避免OCR把+号和数字混识别；实机1080x1920：文本如 16963/50）
+STAMINA_PER_PATROL = 5                            # 一次快速巡逻消耗的鸡腿(体力)数量（实机验证：每次消耗5）
 OUT_OF_STAMINA_EXIT = 10                          # 体力(鸡腿)不足时退出码（主循环 _on_level_select 据此停止自动闯关）
 BAG_FULL_EXIT = 11                                # 背包已满时退出码（主循环据此停止自动闯关）
 # 历史常量：原「挑战失败」后「再来一次」硬上限（超过则 sys.exit 停止脚本）。
 # 现改为「失败→调优→重打」无限循环（由主循环体力(鸡腿)不足兜底退出），此值不再作停止条件，
 # 仅保留作预留 / 日志参考。见 handlers._on_defeat。
 MAX_DEFEAT_RETRY = 3
-STOP_STAMINA_THRESHOLD = STAMINA_PER_PATROL      # 鸡腿(体力)低于此值即停止脚本；可被启动参数 --min-stamina/-s 覆盖，默认同一次巡逻消耗
+STOP_STAMINA_THRESHOLD = 50                       # 鸡腿(体力)低于此值即停止脚本；可被启动参数 --min-stamina/-s 覆盖，默认50（注意：快速巡逻一次只消耗5，闯关一次消耗50）
 
 SELECTED_BRIGHTNESS_THRESHOLD = 650  # 选中状态亮度阈值（选中>650，未选中<620）
 

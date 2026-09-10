@@ -144,11 +144,11 @@ def run_quick_patrol(max_loops=None):
                 # 背包满时点击快速巡逻会被拦截、鸡腿不减少；连续 3 次未明显减少即判定无法巡逻。
                 # 用「消耗差值」判断而非单纯比较大小，可容忍 OCR 抖动并自动纠正错误基准。
                 if last_qp_stamina is not None and stamina is not None:
-                    consumed = last_qp_stamina - stamina   # 正常应≈单次消耗(50)
+                    consumed = last_qp_stamina - stamina   # 正数=减少了，负数=增加了
                     if consumed < 0:
                         # 鸡腿不减反增，多为 OCR 读数异常或界面未稳，不计入、重置基准
                         no_consume_count = 0
-                    elif consumed < STAMINA_PER_PATROL - 20:   # 没消耗够一次巡逻的量（正常约50）
+                    elif consumed < 3:    # 鸡腿没明显减少（消耗<3，考虑OCR抖动），可能背包满
                         no_consume_count += 1
                         print(f"[{_ts()}] ⚠ 点击快速巡逻后鸡腿未明显减少（{last_qp_stamina}→{stamina}，消耗{consumed}），连续 {no_consume_count}/3 次疑似无法巡逻（背包满？）")
                         if no_consume_count >= 3:
