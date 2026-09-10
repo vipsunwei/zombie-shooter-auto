@@ -9,6 +9,12 @@
 
 （暂无变更）
 
+## [2.1.1] - 2026-09-10
+
+### 🐛 修复
+
+- 鸡腿识别与巡逻判断修复 + 新增139关流派 (8e85a05)
+
 ## [2.1.0] - 2026-09-08
 
 ### ✨ 新增
@@ -208,7 +214,8 @@
 
 ---
 
-[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.1.0...HEAD
+[未发布]: https://github.com/vipsunwei/zombie-shooter-auto/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.1.1
 [2.1.0]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.1.0
 [2.0.3]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.3
 [2.0.2]: https://github.com/vipsunwei/zombie-shooter-auto/releases/tag/v2.0.2
